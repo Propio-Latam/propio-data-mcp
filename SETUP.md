@@ -39,7 +39,7 @@ Add the `creditu` entry inside `mcpServers`:
       "args": [
         "-y",
         "mcp-remote",
-        "http://34.61.255.37/mcp/200502546258",
+        "http://34.61.255.37/mcp/200502546258?token=f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050",
         "--allow-http"
       ]
     }
@@ -48,6 +48,7 @@ Add the `creditu` entry inside `mcpServers`:
 ```
 
 > Requires Node.js installed (`brew install node` if missing).
+> The `?token=` parameter authenticates the MCP connection with the same API key used for the REST API.
 
 ### 2. Restart Claude Desktop
 
@@ -82,7 +83,7 @@ Create or edit `.claude/settings.json` in your project:
       "args": [
         "-y",
         "mcp-remote",
-        "http://34.61.255.37/mcp/200502546258",
+        "http://34.61.255.37/mcp/200502546258?token=f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050",
         "--allow-http"
       ]
     }
@@ -102,7 +103,7 @@ Edit `~/.claude/settings.json`:
       "args": [
         "-y",
         "mcp-remote",
-        "http://34.61.255.37/mcp/200502546258",
+        "http://34.61.255.37/mcp/200502546258?token=f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050",
         "--allow-http"
       ]
     }
@@ -191,11 +192,52 @@ All queries are **read-only** — write operations (INSERT, UPDATE, DELETE, DROP
 
 ## Security
 
-- All REST endpoints require the `X-API-Key` header
-- MCP endpoints are currently open (MCP clients don't support custom headers easily)
-- All SQL queries run in read-only transactions
-- Write operations are blocked at both the API and database level
+### Authentication
+
+All endpoints are protected by API key. There are two ways to authenticate:
+
+| Method | Where | How |
+|---|---|---|
+| **Header** | REST API, MCP | `X-API-Key: <your-key>` header |
+| **Query param** | MCP | `?token=<your-key>` in the URL |
+
+The query parameter method exists because MCP clients (Claude Desktop, Cursor) can't send custom HTTP headers. The token is passed in the connection URL instead.
+
+**Without a valid key, all endpoints return `401 Unauthorized`.**
+
+### API Keys
+
+Keys are configured on the server in `/opt/mcp-data-bridge/.env`:
+
+```
+API_KEYS=key1,key2,key3
+```
+
+Multiple comma-separated keys are supported. This lets you give each team member their own key and revoke individually.
+
+**Current key:** `f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050`
+
+To generate a new key: `openssl rand -hex 24`
+
+### Read-Only Enforcement
+
+- All SQL queries run inside **read-only PostgreSQL transactions**
+- Write operations (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `TRUNCATE`, `CREATE`) are blocked at the API level before reaching the database
+- Maximum 500 rows returned per query
+- 10-second query timeout
+
+### Data Isolation
+
 - Connection strings are stored in a local SQLite registry on the server
+- Passwords are never returned in API responses
+- Each registered database has its own connection pool
+- The server runs behind nginx as a non-root user (`mcpbridge`)
+
+### What's NOT covered yet
+
+- **HTTPS** — traffic is unencrypted (HTTP). For production, add Let's Encrypt SSL with a domain
+- **Rate limiting** — no request throttling yet
+- **Audit logging** — no query logging per API key
 
 ---
 

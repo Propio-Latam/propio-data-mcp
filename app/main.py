@@ -67,13 +67,25 @@ class MCPStreamableMiddleware:
 
     async def _handle_mcp(self, scope: Scope, receive: Receive, send: Send, db_id: str):
         from app.db_registry import get_database, get_database_by_name
+        from app.config import settings
+
+        request = StarletteRequest(scope, receive, send)
+
+        # Auth: check X-API-Key header OR ?token= query param
+        if settings.valid_api_keys:
+            token = (
+                request.headers.get("x-api-key")
+                or request.query_params.get("token")
+            )
+            if not token or token not in settings.valid_api_keys:
+                await self._send_json(send, 401, {"detail": "Invalid or missing API key"})
+                return
 
         config = await get_database(db_id) or await get_database_by_name(db_id)
         if not config:
             await self._send_json(send, 404, {"detail": "Database not found"})
             return
 
-        request = StarletteRequest(scope, receive, send)
         method = request.method
         session_id = request.headers.get("mcp-session-id")
 
@@ -169,7 +181,7 @@ async def _resolve_db(db_id: str):
 
 
 @app.get("/mcp/{db_id}/sse")
-async def mcp_sse_endpoint(request: Request, db_id: str):
+async def mcp_sse_endpoint(request: Request, db_id: str, _key: str = Depends(require_api_key)):
     config = await _resolve_db(db_id)
     if not config:
         return JSONResponse(status_code=404, content={"detail": "Database not found"})
@@ -180,7 +192,7 @@ async def mcp_sse_endpoint(request: Request, db_id: str):
 
 
 @app.post("/mcp/{db_id}/messages/")
-async def mcp_messages_endpoint(request: Request, db_id: str):
+async def mcp_messages_endpoint(request: Request, db_id: str, _key: str = Depends(require_api_key)):
     config = await _resolve_db(db_id)
     if not config:
         return JSONResponse(status_code=404, content={"detail": "Database not found"})
