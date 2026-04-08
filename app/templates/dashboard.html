@@ -57,6 +57,28 @@
 </div>
 {% endif %}
 
+{% if databases %}
+<section class="section">
+    <h2>Connect to Claude</h2>
+    <div class="setup-card">
+        <p>Set up all databases in Claude Code and Claude Desktop with one command:</p>
+        <div class="code-block">
+            <code>curl -sL https://private-mcp.propiolatam.com/portal/setup-script | bash</code>
+            <button class="btn-icon" onclick="copyText('curl -sL https://private-mcp.propiolatam.com/portal/setup-script | bash')" title="Copy">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+        </div>
+        <p class="form-hint" style="margin-top:0.75rem">Or copy the JSON config for manual setup:</p>
+        <div class="code-block">
+            <code><a href="/portal/mcp-config.json" target="_blank">/portal/mcp-config.json</a></code>
+            <button class="btn-icon" onclick="fetchAndCopy('/portal/mcp-config.json')" title="Copy JSON">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+        </div>
+    </div>
+</section>
+{% endif %}
+
 {% if history %}
 <section class="section">
     <h2>Recent Uploads</h2>
@@ -102,6 +124,15 @@ function copyText(text) {
         var el = event.target.closest('button');
         el.classList.add('copied');
         setTimeout(function() { el.classList.remove('copied'); }, 1500);
+    });
+}
+function fetchAndCopy(url) {
+    fetch(url).then(function(r) { return r.text(); }).then(function(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            var el = event.target.closest('button');
+            el.classList.add('copied');
+            setTimeout(function() { el.classList.remove('copied'); }, 1500);
+        });
     });
 }
 </script>

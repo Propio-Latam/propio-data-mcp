@@ -1,11 +1,12 @@
-"""Portal routes — dashboard, upload, database detail, delete."""
+"""Portal routes — dashboard, upload, database detail, delete, setup scripts."""
 
 import asyncio
+import json
 import os
 import shutil
 import tempfile
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings
@@ -253,3 +254,127 @@ async def delete_db(request: Request, db_id: str):
         url=f"/portal/?message=Database '{db_name}' deleted",
         status_code=303,
     )
+
+
+# ---- MCP Setup endpoints ----
+
+API_KEY = "f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050"
+BASE_URL = "https://private-mcp.propiolatam.com"
+
+
+@router.get("/setup-script", response_class=PlainTextResponse)
+async def setup_script():
+    """Generate a setup script that configures ALL registered databases for Claude Code + Desktop."""
+    dbs = await list_databases()
+
+    servers = {}
+    for db in dbs:
+        servers[db.name] = {
+            "command": "npx",
+            "args": ["-y", "mcp-remote", f"{BASE_URL}/mcp/{db.id}?token={API_KEY}"],
+        }
+
+    script = f'''#!/usr/bin/env bash
+# =============================================================================
+# Propio Data MCP — Auto-generated setup for all databases
+# Generated from: {BASE_URL}/portal/setup-script
+#
+# Usage:
+#   curl -sL {BASE_URL}/portal/setup-script | bash
+# =============================================================================
+set -euo pipefail
+
+echo ""
+echo "  Propio Data MCP — Setup"
+echo "  ========================"
+echo ""
+
+if ! command -v npx &>/dev/null; then
+    echo "[!] Node.js is required but not installed."
+    echo "    Install with: brew install node"
+    exit 1
+fi
+
+if ! command -v python3 &>/dev/null; then
+    echo "[!] Python3 is required."
+    exit 1
+fi
+
+echo "[*] Testing connection..."
+HEALTH=$(curl -sf {BASE_URL}/health 2>/dev/null || echo "FAIL")
+if [ "$HEALTH" = "FAIL" ]; then
+    echo "[!] Cannot reach server. Check your network."
+    exit 1
+fi
+echo "[+] Server is up"
+echo ""
+
+# ---- Helper: merge mcpServers into a JSON config ----
+merge_config() {{
+    local FILE="$1"
+    python3 << 'PYEOF'
+import json, os
+
+file_path = "$FILE"
+servers = {json.dumps(servers, indent=2)}
+
+config = {{}}
+if os.path.exists(file_path):
+    try:
+        with open(file_path) as f:
+            config = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        config = {{}}
+
+if "mcpServers" not in config:
+    config["mcpServers"] = {{}}
+
+changed = False
+for name, entry in servers.items():
+    config["mcpServers"][name] = entry
+    changed = True
+    print(f"  [+] Configured: {{name}}")
+
+if changed:
+    os.makedirs(os.path.dirname(file_path) or ".", exist_ok=True)
+    with open(file_path, "w") as f:
+        json.dump(config, f, indent=2)
+PYEOF
+}}
+
+echo "[*] Setting up Claude Code..."
+merge_config "$HOME/.claude/settings.json"
+
+echo "[*] Setting up Claude Desktop..."
+if [ "$(uname)" = "Darwin" ]; then
+    merge_config "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+else
+    merge_config "$HOME/.config/Claude/claude_desktop_config.json"
+fi
+
+echo ""
+echo "  Setup complete! Configured {len(dbs)} database(s):"
+'''
+    for db in dbs:
+        script += f'echo "    - {db.name}: {db.description}"\n'
+
+    script += f'''echo ""
+echo "  Restart Claude Code / Claude Desktop to apply."
+echo ""
+echo "  Portal: {BASE_URL}/portal/"
+echo ""
+'''
+    return PlainTextResponse(content=script, media_type="text/plain")
+
+
+@router.get("/mcp-config.json")
+async def mcp_config_json():
+    """Return the mcpServers JSON config for all databases (copy-paste into settings)."""
+    dbs = await list_databases()
+    servers = {}
+    for db in dbs:
+        servers[db.name] = {
+            "command": "npx",
+            "args": ["-y", "mcp-remote", f"{BASE_URL}/mcp/{db.id}?token={API_KEY}"],
+        }
+    return JSONResponse(content={"mcpServers": servers}, media_type="application/json")
