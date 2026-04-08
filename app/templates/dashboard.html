@@ -79,27 +79,19 @@
 </div>
 {% endif %}
 
-{% if databases %}
 <section class="section">
     <div class="section-title" data-i18n="connect_claude">Conectar con Claude</div>
     <div class="setup-card">
-        <p>Configura todas las bases de datos en Claude Code y Claude Desktop con un comando:</p>
+        <p>Configura el MCP unificado en Claude Code y Claude Desktop (solo una vez):</p>
         <div class="code-block">
             <code>curl -sL https://private-mcp.propiolatam.com/setup/script | bash</code>
             <button class="btn-icon" onclick="copyText('curl -sL https://private-mcp.propiolatam.com/setup/script | bash')" title="Copiar" aria-label="Copiar comando">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             </button>
         </div>
-        <p class="form-hint" style="margin-bottom:0.75rem">O copia el JSON para configuraci&oacute;n manual:</p>
-        <div class="code-block">
-            <code><a href="/setup/mcp-config.json" target="_blank">/setup/mcp-config.json</a></code>
-            <button class="btn-icon" onclick="fetchAndCopy('/setup/mcp-config.json')" title="Copiar JSON" aria-label="Copiar JSON">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            </button>
-        </div>
+        <p class="form-hint" style="margin-top:0.5rem">Un solo endpoint para todas las bases de datos. Las nuevas bases se descubren automaticamente — no necesitas reconfigurar.</p>
     </div>
 </section>
-{% endif %}
 
 {% if history %}
 <section class="section">

@@ -51,7 +51,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 from app.auth import require_api_key
 from app.db_registry import get_database, get_database_by_name, list_databases
 from app.db_pool import close_all_pools
-from app.mcp_handler import create_mcp_server
+from app.mcp_handler import create_mcp_server, create_unified_mcp_server
 from app.api.admin import router as admin_router
 from app.api.query import router as query_router
 from app.portal.routes import router as portal_router
@@ -119,10 +119,15 @@ class MCPStreamableMiddleware:
                 await self._send_json(send, 401, {"detail": "Invalid or missing API key"})
                 return
 
-        config = await get_database(db_id) or await get_database_by_name(db_id)
-        if not config:
-            await self._send_json(send, 404, {"detail": "Database not found"})
-            return
+        # Unified endpoint: /mcp/all serves all databases
+        if db_id == "all":
+            server_factory = lambda: create_unified_mcp_server()
+        else:
+            config = await get_database(db_id) or await get_database_by_name(db_id)
+            if not config:
+                await self._send_json(send, 404, {"detail": "Database not found"})
+                return
+            server_factory = lambda c=config: create_mcp_server(c)
 
         method = request.method
         session_id = request.headers.get("mcp-session-id")
@@ -149,7 +154,7 @@ class MCPStreamableMiddleware:
             await self._send_json(send, 503, {"detail": "Too many active sessions"})
             return
         new_session_id = uuid.uuid4().hex
-        server = create_mcp_server(config)
+        server = server_factory()
         transport = StreamableHTTPServerTransport(
             mcp_session_id=new_session_id,
             is_json_response_enabled=True,
@@ -264,14 +269,14 @@ def _setup_base_url():
 
 @app.get("/setup/script", response_class=PlainTextResponse)
 async def setup_script():
-    """Bash script that configures ALL databases for Claude Code + Desktop."""
+    """Bash script that configures the unified MCP endpoint for Claude Code + Desktop."""
     dbs = await list_databases()
-    servers = {}
-    for db in dbs:
-        servers[db.name] = {
+    servers = {
+        "propio-mcp": {
             "command": "npx",
-            "args": ["-y", "mcp-remote", f"{_setup_base_url()}/mcp/{db.id}?token={_setup_api_key()}"],
+            "args": ["-y", "mcp-remote", f"{_setup_base_url()}/mcp/all?token={_setup_api_key()}"],
         }
+    }
 
     servers_json = json_mod.dumps(servers, indent=2)
     db_list = "\n".join(f'echo "    - {db.name}: {db.description}"' for db in dbs)
@@ -347,9 +352,11 @@ else
 fi
 
 echo ""
-echo "  Setup complete! Configured {len(dbs)} database(s):"
+echo "  Setup complete! Single unified MCP endpoint configured."
+echo "  Available databases ({len(dbs)}):"
 {db_list}
 echo ""
+echo "  New databases are auto-discovered — no reconfiguration needed."
 echo "  Restart Claude Code / Claude Desktop to apply."
 echo "  Portal: {_setup_base_url()}/portal/"
 echo ""
@@ -359,14 +366,13 @@ echo ""
 
 @app.get("/setup/mcp-config.json")
 async def mcp_config_json():
-    """JSON config for all databases — copy into Claude settings."""
-    dbs = await list_databases()
-    servers = {}
-    for db in dbs:
-        servers[db.name] = {
+    """JSON config for unified MCP endpoint — copy into Claude settings."""
+    servers = {
+        "propio-mcp": {
             "command": "npx",
-            "args": ["-y", "mcp-remote", f"{_setup_base_url()}/mcp/{db.id}?token={_setup_api_key()}"],
+            "args": ["-y", "mcp-remote", f"{_setup_base_url()}/mcp/all?token={_setup_api_key()}"],
         }
+    }
     return JSONResponse(content={"mcpServers": servers})
 
 
