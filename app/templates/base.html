@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MCP Data Bridge{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/portal/" class="nav-brand">MCP Data Bridge</a>
+            <div class="nav-links">
+                <a href="/portal/" class="nav-link">Dashboard</a>
+                <a href="/portal/upload" class="nav-link nav-link-upload">Upload Data</a>
+            </div>
+            <div class="nav-user">{{ user_email }}</div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% if message %}
+        <div class="alert alert-success">{{ message }}</div>
+        {% endif %}
+        {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container">MCP Data Bridge &mdash; Propio Latam</div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ config.name }} &mdash; MCP Data Bridge{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/portal/" class="back-link">&larr; Back to Dashboard</a>
+        <h1>{{ config.name }}</h1>
+        {% if config.description %}
+        <p class="page-desc">{{ config.description }}</p>
+        {% endif %}
+    </div>
+    <form method="post" action="/portal/databases/{{ config.id }}/delete"
+          onsubmit="return confirm('Delete database \'{{ config.name }}\'? This removes all data and cannot be undone.')">
+        <button type="submit" class="btn btn-danger">Delete Database</button>
+    </form>
+</div>
+
+<div class="detail-meta">
+    <div class="meta-item">
+        <span class="meta-label">Database ID</span>
+        <code>{{ config.id }}</code>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">MCP Endpoint</span>
+        <code class="endpoint-code">/mcp/{{ config.id }}</code>
+        <button class="btn-icon" onclick="copyText('/mcp/{{ config.id }}')" title="Copy endpoint">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">Created</span>
+        <span>{{ config.created_at or "Unknown" }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label">PostgreSQL Database</span>
+        <code>{{ config.dbname }}</code>
+    </div>
+</div>
+
+{% if tables %}
+{% for t in tables %}
+<section class="section table-section">
+    <div class="section-header">
+        <h2>{{ t.schema }}.{{ t.name }}</h2>
+        <span class="badge badge-info">{{ "{:,}".format(t.row_count) }} rows</span>
+    </div>
+
+    <h3>Schema</h3>
+    <div class="table-wrapper">
+        <table class="table table-compact">
+            <thead>
+                <tr>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>Nullable</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for col in t.columns %}
+                <tr>
+                    <td><code>{{ col.column_name }}</code></td>
+                    <td>{{ col.data_type }}</td>
+                    <td>{{ col.is_nullable }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if t.sample_rows %}
+    <h3>Sample Data ({{ t.sample_rows | length }} rows)</h3>
+    <div class="table-wrapper">
+        <table class="table table-compact">
+            <thead>
+                <tr>
+                    {% for col in t.columns %}
+                    <th>{{ col.column_name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in t.sample_rows %}
+                <tr>
+                    {% for col in t.columns %}
+                    <td>{{ row.get(col.column_name, "") }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<div class="empty-state">
+    <p>No tables found in this database.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        var el = event.target.closest('button');
+        el.classList.add('copied');
+        setTimeout(function() { el.classList.remove('copied'); }, 1500);
+    });
+}
+</script>
+{% endblock %}

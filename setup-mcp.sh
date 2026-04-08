@@ -11,7 +11,7 @@
 set -euo pipefail
 
 API_KEY="f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050"
-MCP_URL="http://34.61.255.37/mcp/200502546258?token=${API_KEY}"
+MCP_URL="https://private-mcp.propio.cl/mcp/200502546258?token=${API_KEY}"
 
 echo ""
 echo "  Propio Data MCP — Setup"
@@ -35,7 +35,7 @@ fi
 # ---------- Test connection ----------
 
 echo "[*] Testing connection to MCP server..."
-HEALTH=$(curl -sf http://34.61.255.37/health 2>/dev/null || echo "FAIL")
+HEALTH=$(curl -sf https://private-mcp.propio.cl/health 2>/dev/null || echo "FAIL")
 if [ "$HEALTH" = "FAIL" ]; then
     echo "[!] Cannot reach server at 34.61.255.37. Check your network."
     exit 1
@@ -55,7 +55,7 @@ mcp_url = "$MCP_URL"
 
 mcp_entry = {
     "command": "npx",
-    "args": ["-y", "mcp-remote", mcp_url, "--allow-http"]
+    "args": ["-y", "mcp-remote", mcp_url]
 }
 
 # Read existing config or start fresh
@@ -126,7 +126,7 @@ echo "  Try asking Claude:"
 echo "    'List the tables in the creditu database'"
 echo "    'Show me the top 10 debtors by total amount'"
 echo ""
-echo "  Server:   http://34.61.255.37"
-echo "  API Docs: http://34.61.255.37/docs"
+echo "  Server:   https://private-mcp.propio.cl"
+echo "  API Docs: https://private-mcp.propio.cl/docs"
 echo "  API Key:  $API_KEY"
 echo ""

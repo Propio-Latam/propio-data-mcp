@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Upload Data &mdash; MCP Data Bridge{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Upload Excel Data</h1>
+</div>
+
+<form method="post" action="/portal/upload" enctype="multipart/form-data" id="upload-form" class="form-card">
+    <div class="form-group">
+        <label for="source_name">Source Name <span class="required">*</span></label>
+        <input type="text" id="source_name" name="source_name" required
+               placeholder="e.g., Banco Estado, Santander, Creditu"
+               pattern="[a-zA-Z0-9\s\-]+"
+               title="Letters, numbers, spaces, and hyphens only">
+        <p class="form-hint">This creates a new database. Use the same name to replace existing data.</p>
+    </div>
+
+    <div class="form-group">
+        <label for="description">Description</label>
+        <input type="text" id="description" name="description"
+               placeholder="e.g., Loan remittance data from Banco Estado">
+    </div>
+
+    <div class="form-group">
+        <label>Excel Files <span class="required">*</span></label>
+        <div class="drop-zone" id="drop-zone">
+            <input type="file" id="files" name="files" multiple
+                   accept=".xlsx,.xls" class="drop-zone-input">
+            <div class="drop-zone-prompt">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <p>Drag & drop .xlsx files here, or <strong>click to browse</strong></p>
+                <p class="form-hint">Max {{ max_size_mb }} MB per file</p>
+            </div>
+        </div>
+        <div id="file-list" class="file-list"></div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+            Upload & Process
+        </button>
+        <a href="/portal/" class="btn btn-secondary">Cancel</a>
+    </div>
+
+    <div id="upload-progress" class="upload-progress hidden">
+        <div class="spinner"></div>
+        <p>Processing... This may take a minute for large files.</p>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var dropZone = document.getElementById('drop-zone');
+    var fileInput = document.getElementById('files');
+    var fileList = document.getElementById('file-list');
+    var form = document.getElementById('upload-form');
+    var submitBtn = document.getElementById('submit-btn');
+    var progress = document.getElementById('upload-progress');
+    var maxSizeMB = {{ max_size_mb }};
+
+    // Drag & drop
+    dropZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', function() {
+        dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    fileInput.addEventListener('change', updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = '';
+        var files = fileInput.files;
+        if (!files.length) return;
+
+        var totalSize = 0;
+        for (var i = 0; i < files.length; i++) {
+            var f = files[i];
+            totalSize += f.size;
+            var sizeMB = (f.size / 1024 / 1024).toFixed(1);
+            var ext = f.name.split('.').pop().toLowerCase();
+            var valid = (ext === 'xlsx' || ext === 'xls') && f.size <= maxSizeMB * 1024 * 1024;
+
+            var div = document.createElement('div');
+            div.className = 'file-item' + (valid ? '' : ' file-item-invalid');
+            div.innerHTML = '<span class="file-name">' + f.name + '</span>' +
+                           '<span class="file-size">' + sizeMB + ' MB</span>' +
+                           (valid ? '' : '<span class="file-error">Invalid</span>');
+            fileList.appendChild(div);
+        }
+
+        var totalDiv = document.createElement('div');
+        totalDiv.className = 'file-total';
+        totalDiv.textContent = files.length + ' file(s), ' + (totalSize / 1024 / 1024).toFixed(1) + ' MB total';
+        fileList.appendChild(totalDiv);
+    }
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        var sourceName = document.getElementById('source_name').value.trim();
+        var files = fileInput.files;
+
+        if (!sourceName) {
+            e.preventDefault();
+            alert('Source name is required');
+            return;
+        }
+        if (!files.length) {
+            e.preventDefault();
+            alert('Please select at least one file');
+            return;
+        }
+
+        for (var i = 0; i < files.length; i++) {
+            var ext = files[i].name.split('.').pop().toLowerCase();
+            if (ext !== 'xlsx' && ext !== 'xls') {
+                e.preventDefault();
+                alert('File "' + files[i].name + '" is not an Excel file (.xlsx or .xls)');
+                return;
+            }
+            if (files[i].size > maxSizeMB * 1024 * 1024) {
+                e.preventDefault();
+                alert('File "' + files[i].name + '" exceeds ' + maxSizeMB + ' MB limit');
+                return;
+            }
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading...';
+        progress.classList.remove('hidden');
+    });
+})();
+</script>
+{% endblock %}

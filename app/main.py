@@ -13,6 +13,8 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 from mcp.server.sse import SseServerTransport
 
+from fastapi.staticfiles import StaticFiles
+
 from app.config import settings
 from app.auth import require_api_key
 from app.db_registry import get_database, get_database_by_name, list_databases
@@ -20,6 +22,7 @@ from app.db_pool import close_all_pools
 from app.mcp_handler import create_mcp_server
 from app.api.admin import router as admin_router
 from app.api.query import router as query_router
+from app.portal.routes import router as portal_router
 
 
 # ---- Session management ----
@@ -166,6 +169,12 @@ app.add_middleware(
 
 app.include_router(admin_router)
 app.include_router(query_router)
+app.include_router(portal_router)
+
+import os
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(_static_dir):
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
 @app.get("/health")

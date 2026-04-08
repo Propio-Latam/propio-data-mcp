@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Dashboard &mdash; MCP Data Bridge{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Registered Databases</h1>
+    <a href="/portal/upload" class="btn btn-primary">Upload New Data</a>
+</div>
+
+{% if databases %}
+<div class="card-grid">
+    {% for db in databases %}
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">{{ db.config.name }}</h2>
+            {% if db.config.description %}
+            <p class="card-desc">{{ db.config.description }}</p>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="stat-row">
+                <span class="stat-label">Tables</span>
+                <span class="stat-value">{{ db.table_count }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Total Rows</span>
+                <span class="stat-value">{{ "{:,}".format(db.total_rows) }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Created</span>
+                <span class="stat-value">{{ db.config.created_at or "—" }}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">MCP Endpoint</span>
+                <span class="stat-value endpoint-value">
+                    <code class="endpoint-code">/mcp/{{ db.config.id }}</code>
+                    <button class="btn-icon" onclick="copyText('/mcp/{{ db.config.id }}')" title="Copy">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    </button>
+                </span>
+            </div>
+        </div>
+        <div class="card-footer">
+            <a href="/portal/databases/{{ db.config.id }}" class="btn btn-secondary">View Details</a>
+            <form method="post" action="/portal/databases/{{ db.config.id }}/delete" class="inline-form"
+                  onsubmit="return confirm('Delete database \'{{ db.config.name }}\'? This removes all data and cannot be undone.')">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No databases registered yet.</p>
+    <a href="/portal/upload" class="btn btn-primary">Upload your first Excel file</a>
+</div>
+{% endif %}
+
+{% if history %}
+<section class="section">
+    <h2>Recent Uploads</h2>
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Source</th>
+                    <th>Files</th>
+                    <th>Rows</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in history %}
+                <tr>
+                    <td>{{ h.timestamp }}</td>
+                    <td>{{ h.user_email }}</td>
+                    <td>{{ h.source_name }}</td>
+                    <td>{{ h.file_names | join(", ") }}</td>
+                    <td>{{ "{:,}".format(h.row_count) }}</td>
+                    <td>
+                        <span class="badge badge-{{ h.status }}">{{ h.status }}</span>
+                        {% if h.error_message %}
+                        <span class="error-hint" title="{{ h.error_message }}">(?)</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        var el = event.target.closest('button');
+        el.classList.add('copied');
+        setTimeout(function() { el.classList.remove('copied'); }, 1500);
+    });
+}
+</script>
+{% endblock %}
