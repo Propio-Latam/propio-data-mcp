@@ -16,8 +16,8 @@ jobs:
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
+          username: ${{ secrets.VM_ADMIN_USER }}
+          key: ${{ secrets.VM_ADMIN_KEY }}
           request_pty: true
           command_timeout: 15m
           script: |
