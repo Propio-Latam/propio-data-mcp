@@ -5,9 +5,11 @@ import re
 import uuid
 from contextlib import asynccontextmanager
 
+import json as json_mod
+
 from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.requests import Request as StarletteRequest
 from starlette.types import ASGIApp, Receive, Scope, Send
 from mcp.server.streamable_http import StreamableHTTPServerTransport
@@ -209,6 +211,117 @@ async def mcp_messages_endpoint(request: Request, db_id: str, _key: str = Depend
     sse = SseServerTransport(f"/mcp/{db_id}/messages/")
     async with sse.connect_sse(request.scope, request.receive, request._send) as (r, w):
         await server.run(r, w, server.create_initialization_options())
+
+
+# ---- Public setup endpoints (outside Cloudflare Access /portal/*) ----
+
+_SETUP_API_KEY = "f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050"
+_SETUP_BASE_URL = "https://private-mcp.propiolatam.com"
+
+
+@app.get("/setup/script", response_class=PlainTextResponse)
+async def setup_script():
+    """Bash script that configures ALL databases for Claude Code + Desktop."""
+    dbs = await list_databases()
+    servers = {}
+    for db in dbs:
+        servers[db.name] = {
+            "command": "npx",
+            "args": ["-y", "mcp-remote", f"{_SETUP_BASE_URL}/mcp/{db.id}?token={_SETUP_API_KEY}"],
+        }
+
+    servers_json = json_mod.dumps(servers, indent=2)
+    db_list = "\n".join(f'echo "    - {db.name}: {db.description}"' for db in dbs)
+
+    script = f'''#!/usr/bin/env bash
+# Propio Data MCP — Auto-generated setup for all databases
+# Usage: curl -sL {_SETUP_BASE_URL}/setup/script | bash
+set -euo pipefail
+
+echo ""
+echo "  Propio Data MCP — Setup"
+echo "  ========================"
+echo ""
+
+if ! command -v npx &>/dev/null; then
+    echo "[!] Node.js is required. Install with: brew install node"
+    exit 1
+fi
+if ! command -v python3 &>/dev/null; then
+    echo "[!] Python3 is required."
+    exit 1
+fi
+
+echo "[*] Testing connection..."
+HEALTH=$(curl -sf {_SETUP_BASE_URL}/health 2>/dev/null || echo "FAIL")
+if [ "$HEALTH" = "FAIL" ]; then
+    echo "[!] Cannot reach server."
+    exit 1
+fi
+echo "[+] Server is up"
+echo ""
+
+merge_config() {{
+    local FILE="$1"
+    python3 << 'PYEOF'
+import json, os
+
+file_path = "$FILE"
+servers = {servers_json}
+
+config = {{}}
+if os.path.exists(file_path):
+    try:
+        with open(file_path) as f:
+            config = json.load(f)
+    except (json.JSONDecodeError, IOError):
+        config = {{}}
+
+if "mcpServers" not in config:
+    config["mcpServers"] = {{}}
+
+for name, entry in servers.items():
+    config["mcpServers"][name] = entry
+    print(f"  [+] Configured: {{name}}")
+
+os.makedirs(os.path.dirname(file_path) or ".", exist_ok=True)
+with open(file_path, "w") as f:
+    json.dump(config, f, indent=2)
+PYEOF
+}}
+
+echo "[*] Setting up Claude Code..."
+merge_config "$HOME/.claude/settings.json"
+
+echo "[*] Setting up Claude Desktop..."
+if [ "$(uname)" = "Darwin" ]; then
+    merge_config "$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+else
+    merge_config "$HOME/.config/Claude/claude_desktop_config.json"
+fi
+
+echo ""
+echo "  Setup complete! Configured {len(dbs)} database(s):"
+{db_list}
+echo ""
+echo "  Restart Claude Code / Claude Desktop to apply."
+echo "  Portal: {_SETUP_BASE_URL}/portal/"
+echo ""
+'''
+    return PlainTextResponse(content=script, media_type="text/plain")
+
+
+@app.get("/setup/mcp-config.json")
+async def mcp_config_json():
+    """JSON config for all databases — copy into Claude settings."""
+    dbs = await list_databases()
+    servers = {}
+    for db in dbs:
+        servers[db.name] = {
+            "command": "npx",
+            "args": ["-y", "mcp-remote", f"{_SETUP_BASE_URL}/mcp/{db.id}?token={_SETUP_API_KEY}"],
+        }
+    return JSONResponse(content={"mcpServers": servers})
 
 
 @app.get("/mcp", dependencies=[Depends(require_api_key)])
