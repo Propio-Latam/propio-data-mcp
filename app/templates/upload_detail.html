@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Upload #{{ entry.id }} — Propio MCP{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/portal/" class="back-link">&larr; Dashboard</a>
+        <h1 style="font-family:'Space Grotesk',sans-serif;font-size:1.5rem" data-i18n="upload_detail_title">Detalle de Subida</h1>
+    </div>
+    {% if entry.status in ("processing", "error") %}
+    <form method="post" action="/portal/uploads/{{ entry.id }}/dismiss"
+          onsubmit="return confirm('Descartar esta entrada?')">
+        <button type="submit" class="btn btn-danger" data-i18n="dismiss_btn">Descartar</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="detail-meta">
+    <div class="meta-item">
+        <span class="meta-label">ID</span>
+        <code>#{{ entry.id }}</code>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label" data-i18n="col_status">Estado</span>
+        <span class="badge badge-{{ entry.status }}">{{ entry.status }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label" data-i18n="col_time">Hora</span>
+        <span>{{ entry.timestamp }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label" data-i18n="col_user">Usuario</span>
+        <span>{{ entry.user_email }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label" data-i18n="col_source">Fuente</span>
+        <span>{{ entry.source_name }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label" data-i18n="col_rows">Filas</span>
+        <span>{{ "{:,}".format(entry.row_count) }}</span>
+    </div>
+    <div class="meta-item">
+        <span class="meta-label" data-i18n="col_files">Archivos</span>
+        <span>{{ entry.file_names | join(", ") }}</span>
+    </div>
+</div>
+
+{% if entry.error_message %}
+<section class="section">
+    <div class="section-title" style="color:var(--accent)">[ ERROR ]</div>
+    <div class="setup-card" style="border-color:var(--accent)">
+        <pre style="font-family:'Space Mono',monospace;font-size:13px;color:var(--text-primary);white-space:pre-wrap;word-break:break-word;margin:0">{{ entry.error_message }}</pre>
+    </div>
+</section>
+{% endif %}
+
+{% if entry.status == "processing" %}
+<section class="section">
+    <div class="setup-card">
+        <p style="color:var(--warning);font-family:'Space Mono',monospace;font-size:13px">
+            [ PROCESSING ] Esta entrada lleva tiempo procesando. Puede estar atascada.
+        </p>
+        <p style="color:var(--text-secondary);font-size:13px;margin-top:8px">
+            Usa el boton "Descartar" para limpiar esta entrada y volver a intentar la subida.
+        </p>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

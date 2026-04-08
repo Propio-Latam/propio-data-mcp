@@ -124,14 +124,24 @@
                     <td>{{ h.source_name }}</td>
                     <td>{{ h.file_names | join(", ") }}</td>
                     <td>{{ "{:,}".format(h.row_count) }}</td>
-                    <td>
+                    <td style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                         {% if h.status == "processing" %}
-                        <span class="badge badge-processing badge-pulse" data-i18n="processing">Procesando...</span>
+                        <a href="/portal/uploads/{{ h.id }}" class="badge badge-processing badge-pulse" style="text-decoration:none" data-i18n="processing">Procesando...</a>
+                        <form method="post" action="/portal/uploads/{{ h.id }}/dismiss" class="inline-form"
+                              onsubmit="return confirm('Descartar esta entrada?')">
+                            <button type="submit" class="btn-dismiss" title="Descartar">&times;</button>
+                        </form>
+                        {% elif h.status == "error" %}
+                        <a href="/portal/uploads/{{ h.id }}" class="badge badge-error" style="text-decoration:none">error</a>
+                        <form method="post" action="/portal/uploads/{{ h.id }}/dismiss" class="inline-form"
+                              onsubmit="return confirm('Descartar esta entrada?')">
+                            <button type="submit" class="btn-dismiss" title="Descartar">&times;</button>
+                        </form>
                         {% else %}
                         <span class="badge badge-{{ h.status }}">{{ h.status }}</span>
                         {% endif %}
                         {% if h.error_message %}
-                        <span class="error-hint" title="{{ h.error_message }}">[?]</span>
+                        <a href="/portal/uploads/{{ h.id }}" class="error-hint" title="{{ h.error_message }}">[?]</a>
                         {% endif %}
                     </td>
                 </tr>

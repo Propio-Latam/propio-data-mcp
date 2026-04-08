@@ -21,6 +21,8 @@ from app.portal.audit import (
     get_last_upload_timestamps,
     get_query_history,
     check_source_exists,
+    dismiss_upload,
+    get_upload_detail,
 )
 
 router = APIRouter(prefix="/portal", tags=["portal"])
@@ -415,6 +417,30 @@ async def delete_db(request: Request, db_id: str):
         url=f"/portal/?message=Database '{db_name}' deleted",
         status_code=303,
     )
+
+
+# ---- Upload management ----
+
+@router.post("/uploads/{upload_id}/dismiss")
+async def dismiss_upload_entry(request: Request, upload_id: int):
+    """Dismiss a stuck processing or error upload entry."""
+    dismissed = await dismiss_upload(upload_id)
+    if not dismissed:
+        return RedirectResponse(url="/portal/?error=No se pudo descartar la entrada", status_code=303)
+    return RedirectResponse(url="/portal/?message=Entrada descartada", status_code=303)
+
+
+@router.get("/uploads/{upload_id}", response_class=HTMLResponse)
+async def upload_detail(request: Request, upload_id: int):
+    """Show details of a specific upload entry (errors, files, etc.)."""
+    entry = await get_upload_detail(upload_id)
+    if not entry:
+        raise HTTPException(404, "Upload entry not found")
+    return templates.TemplateResponse("upload_detail.html", {
+        "request": request,
+        "entry": entry,
+        "user_email": _get_user_email(request),
+    })
 
 
 # ---- API endpoints ----

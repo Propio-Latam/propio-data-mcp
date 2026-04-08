@@ -128,6 +128,35 @@ async def get_query_history(limit: int = 10) -> list[dict]:
         await db.close()
 
 
+async def dismiss_upload(upload_id: int) -> bool:
+    """Mark a processing/error upload as dismissed."""
+    db = await _get_db()
+    try:
+        cursor = await db.execute(
+            "UPDATE upload_log SET status = 'dismissed' WHERE id = ? AND status IN ('processing', 'error')",
+            (upload_id,),
+        )
+        await db.commit()
+        return cursor.rowcount > 0
+    finally:
+        await db.close()
+
+
+async def get_upload_detail(upload_id: int) -> dict | None:
+    """Get a single upload log entry by ID."""
+    db = await _get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM upload_log WHERE id = ?", (upload_id,))
+        r = await cursor.fetchone()
+        if not r:
+            return None
+        entry = dict(r)
+        entry["file_names"] = json.loads(entry["file_names"])
+        return entry
+    finally:
+        await db.close()
+
+
 async def check_source_exists(source_name: str) -> dict:
     """Check if a source_name already has data in upload_log (successful uploads)."""
     db = await _get_db()
