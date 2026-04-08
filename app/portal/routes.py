@@ -1,6 +1,9 @@
 """Portal routes — dashboard, upload, database detail, delete."""
 
+import asyncio
 import os
+import shutil
+import tempfile
 from fastapi import APIRouter, Request, UploadFile, File, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -8,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import settings
 from app.db_registry import list_databases, get_database, delete_database
 from app.db_pool import list_tables, describe_table, sample_data, close_pool, get_pool
-from app.services.excel_loader import process_upload, drop_pg_database, UploadError
+from app.services.excel_loader import process_upload, process_upload_from_dir, drop_pg_database, UploadError
 from app.portal.audit import log_upload, get_upload_history
 
 router = APIRouter(prefix="/portal", tags=["portal"])
@@ -86,22 +89,14 @@ async def upload_form(request: Request):
     })
 
 
-@router.post("/upload")
-async def handle_upload(
-    request: Request,
-    source_name: str = Form(...),
-    description: str = Form(""),
-    files: list[UploadFile] = File(...),
-):
-    """Handle file upload — process Excel files and register with MCP."""
-    user_email = _get_user_email(request)
-    file_names = [f.filename or "unknown" for f in files]
-
+async def _background_process(tmp_dir: str, source_name: str, description: str, file_names: list[str], user_email: str):
+    """Process uploaded files in background after HTTP response is sent."""
     try:
-        result = await process_upload(
+        result = await process_upload_from_dir(
             source_name=source_name,
             description=description,
-            files=files,
+            tmp_dir=tmp_dir,
+            file_names=file_names,
         )
         await log_upload(
             user_email=user_email,
@@ -110,29 +105,6 @@ async def handle_upload(
             row_count=result.row_count,
             status="success",
         )
-        message = (
-            f"Uploaded {result.row_count} rows from {len(file_names)} file(s) "
-            f"into '{result.db_name}'. MCP endpoint: {result.mcp_endpoint}"
-        )
-        return RedirectResponse(
-            url=f"/portal/?message={message}",
-            status_code=303,
-        )
-
-    except UploadError as e:
-        await log_upload(
-            user_email=user_email,
-            source_name=source_name,
-            file_names=file_names,
-            row_count=0,
-            status="error",
-            error=str(e),
-        )
-        return RedirectResponse(
-            url=f"/portal/upload?error={e}",
-            status_code=303,
-        )
-
     except Exception as e:
         await log_upload(
             user_email=user_email,
@@ -142,10 +114,66 @@ async def handle_upload(
             status="error",
             error=str(e),
         )
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+@router.post("/upload")
+async def handle_upload(
+    request: Request,
+    source_name: str = Form(...),
+    description: str = Form(""),
+    files: list[UploadFile] = File(...),
+):
+    """Handle file upload — save files to disk and return immediately.
+
+    Processing happens in the background to avoid Cloudflare's 100s timeout.
+    """
+    user_email = _get_user_email(request)
+    file_names = [f.filename or "unknown" for f in files]
+
+    # Validate file extensions before saving
+    for f in files:
+        ext = os.path.splitext(f.filename or "")[1].lower()
+        if ext not in {".xlsx", ".xls"}:
+            return RedirectResponse(
+                url=f"/portal/upload?error=File '{f.filename}' is not an Excel file (.xlsx or .xls)",
+                status_code=303,
+            )
+
+    # Save files to disk immediately (fast — just writing bytes)
+    tmp_dir = tempfile.mkdtemp(prefix="mcp_upload_")
+    try:
+        for f in files:
+            path = os.path.join(tmp_dir, f.filename)
+            with open(path, "wb") as out:
+                shutil.copyfileobj(f.file, out)
+    except Exception as e:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
         return RedirectResponse(
-            url=f"/portal/upload?error=Unexpected error: {e}",
+            url=f"/portal/upload?error=Failed to save files: {e}",
             status_code=303,
         )
+
+    # Fire and forget — process in background
+    asyncio.create_task(_background_process(tmp_dir, source_name, description, file_names, user_email))
+
+    await log_upload(
+        user_email=user_email,
+        source_name=source_name,
+        file_names=file_names,
+        row_count=0,
+        status="processing",
+    )
+
+    message = (
+        f"Uploading {len(file_names)} file(s) for '{source_name}'. "
+        f"Processing in background — check the dashboard in a minute."
+    )
+    return RedirectResponse(
+        url=f"/portal/?message={message}",
+        status_code=303,
+    )
 
 
 @router.get("/databases/{db_id}", response_class=HTMLResponse)

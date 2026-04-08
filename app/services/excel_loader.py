@@ -117,24 +117,24 @@ def _validate_files(files: list[UploadFile]) -> None:
             )
 
 
-def _read_excel_files(tmp_dir: str, files: list[UploadFile]) -> pd.DataFrame:
-    """Save uploaded files to disk, read with pandas, return combined DataFrame."""
+def _read_excel_files_from_dir(tmp_dir: str, file_names: list[str]) -> pd.DataFrame:
+    """Read already-saved Excel files from disk, return combined DataFrame."""
     all_dfs: list[pd.DataFrame] = []
 
-    for f in files:
-        path = os.path.join(tmp_dir, f.filename)
-        with open(path, "wb") as out:
-            shutil.copyfileobj(f.file, out)
+    for fname in file_names:
+        path = os.path.join(tmp_dir, fname)
+        if not os.path.exists(path):
+            raise UploadError(f"File '{fname}' not found on disk")
 
         try:
             df = pd.read_excel(path)
         except Exception as e:
-            raise UploadError(f"Cannot read '{f.filename}': {e}")
+            raise UploadError(f"Cannot read '{fname}': {e}")
 
         if df.empty:
-            raise UploadError(f"File '{f.filename}' contains no data")
+            raise UploadError(f"File '{fname}' contains no data")
 
-        df["source_file"] = f.filename
+        df["source_file"] = fname
         all_dfs.append(df)
 
     combined = pd.concat(all_dfs, ignore_index=True)
@@ -226,3 +226,52 @@ async def process_upload(
             # Reset file positions in case of retry
             for f in files:
                 await f.seek(0)
+
+
+async def process_upload_from_dir(
+    source_name: str,
+    description: str,
+    tmp_dir: str,
+    file_names: list[str],
+    table_name: str = "data",
+) -> UploadResult:
+    """Process files already saved to disk (for background processing).
+
+    Unlike process_upload, this does NOT clean up tmp_dir — caller is responsible.
+    """
+    async with _upload_semaphore:
+        db_name = sanitize_db_name(source_name)
+
+        df = await asyncio.to_thread(_read_excel_files_from_dir, tmp_dir, file_names)
+        row_count = len(df)
+        column_names = list(df.columns)
+
+        await create_pg_database(db_name)
+        await asyncio.to_thread(_load_to_postgres, db_name, table_name, df)
+
+        existing = await get_database_by_name(db_name)
+        if existing:
+            from app.db_pool import close_pool
+            await close_pool(existing.id)
+            await delete_database(existing.id)
+
+        config = await add_database(
+            name=db_name,
+            host=PG_HOST,
+            port=PG_PORT,
+            dbname=db_name,
+            username=PG_USER,
+            password=PG_PASSWORD,
+            description=description or f"Data uploaded from {source_name}",
+            ssl=False,
+        )
+
+        return UploadResult(
+            db_id=config.id,
+            db_name=db_name,
+            table_name=table_name,
+            row_count=row_count,
+            column_names=column_names,
+            mcp_endpoint=f"/mcp/{config.id}",
+            source_files=file_names,
+        )
