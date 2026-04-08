@@ -4,16 +4,22 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <a href="/portal/" class="back-link">&larr; Back to Dashboard</a>
+        <a href="/portal/" class="back-link" data-i18n="back_dashboard">&larr; Volver al Dashboard</a>
         <h1>{{ config.name }}</h1>
         {% if config.description %}
         <p class="page-desc">{{ config.description }}</p>
         {% endif %}
     </div>
-    <form method="post" action="/portal/databases/{{ config.id }}/delete"
-          onsubmit="return confirm('Delete database \'{{ config.name }}\'? This removes all data and cannot be undone.')">
-        <button type="submit" class="btn btn-danger">Delete Database</button>
-    </form>
+    <div class="page-header-actions">
+        <a href="/portal/databases/{{ config.id }}/download" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:0.35rem"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Descargar Excel
+        </a>
+        <form method="post" action="/portal/databases/{{ config.id }}/delete"
+              onsubmit="return confirm('Eliminar base de datos \'{{ config.name }}\'? Esto elimina todos los datos y no se puede deshacer.')">
+            <button type="submit" class="btn btn-danger" data-i18n="delete_btn">Eliminar Base de Datos</button>
+        </form>
+    </div>
 </div>
 
 <div class="detail-meta">
@@ -22,15 +28,15 @@
         <code>{{ config.id }}</code>
     </div>
     <div class="meta-item">
-        <span class="meta-label">MCP Endpoint</span>
+        <span class="meta-label" data-i18n="endpoint_label">Endpoint MCP</span>
         <code class="endpoint-code">/mcp/{{ config.id }}</code>
-        <button class="btn-icon" onclick="copyText('/mcp/{{ config.id }}')" title="Copy endpoint">
+        <button class="btn-icon" onclick="copyText('/mcp/{{ config.id }}')" title="Copiar endpoint">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         </button>
     </div>
     <div class="meta-item">
-        <span class="meta-label">Created</span>
-        <span>{{ config.created_at or "Unknown" }}</span>
+        <span class="meta-label" data-i18n="created_label">Creado</span>
+        <span>{{ config.created_at or "Desconocido" }}</span>
     </div>
     <div class="meta-item">
         <span class="meta-label">PostgreSQL Database</span>
@@ -43,16 +49,16 @@
 <section class="section table-section">
     <div class="section-header">
         <h2>{{ t.schema }}.{{ t.name }}</h2>
-        <span class="badge badge-info">{{ "{:,}".format(t.row_count) }} rows</span>
+        <span class="badge badge-info">{{ "{:,}".format(t.row_count) }} filas</span>
     </div>
 
-    <h3>Schema</h3>
+    <h3>Esquema</h3>
     <div class="table-wrapper">
         <table class="table table-compact">
             <thead>
                 <tr>
-                    <th>Column</th>
-                    <th>Type</th>
+                    <th>Columna</th>
+                    <th>Tipo</th>
                     <th>Nullable</th>
                 </tr>
             </thead>
@@ -69,7 +75,7 @@
     </div>
 
     {% if t.sample_rows %}
-    <h3>Sample Data ({{ t.sample_rows | length }} rows)</h3>
+    <h3>Datos de Muestra ({{ t.sample_rows | length }} filas)</h3>
     <div class="table-wrapper">
         <table class="table table-compact">
             <thead>
@@ -95,7 +101,7 @@
 {% endfor %}
 {% else %}
 <div class="empty-state">
-    <p>No tables found in this database.</p>
+    <p>No se encontraron tablas en esta base de datos.</p>
 </div>
 {% endif %}
 {% endblock %}

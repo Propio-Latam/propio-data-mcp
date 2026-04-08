@@ -3,14 +3,22 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>Registered Databases</h1>
-    <a href="/portal/upload" class="btn btn-primary">Upload New Data</a>
+    <h1 data-i18n="nav_dashboard">Dashboard</h1>
+    <a href="/portal/upload" class="btn btn-primary" data-i18n="nav_upload">Subir Datos</a>
 </div>
 
 {% if databases %}
-<div class="card-grid">
+<!-- Search/filter -->
+<div class="search-bar-wrap">
+    <input type="text" id="db-search" class="search-input"
+           data-i18n-placeholder="search_placeholder"
+           placeholder="Buscar bases de datos..."
+           aria-label="Buscar bases de datos">
+</div>
+
+<div class="card-grid" id="card-grid">
     {% for db in databases %}
-    <div class="card">
+    <div class="card" data-db-name="{{ db.config.name | lower }}" data-db-desc="{{ (db.config.description or '') | lower }}">
         <div class="card-header">
             <h2 class="card-title">{{ db.config.name }}</h2>
             {% if db.config.description %}
@@ -19,59 +27,68 @@
         </div>
         <div class="card-body">
             <div class="stat-row">
-                <span class="stat-label">Tables</span>
+                <span class="stat-label" data-i18n="tables_label">Tablas</span>
                 <span class="stat-value">{{ db.table_count }}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Total Rows</span>
+                <span class="stat-label" data-i18n="rows_label">Filas Totales</span>
                 <span class="stat-value">{{ "{:,}".format(db.total_rows) }}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Created</span>
+                <span class="stat-label" data-i18n="created_label">Creado</span>
                 <span class="stat-value">{{ db.config.created_at or "—" }}</span>
             </div>
+            {% if db.last_updated %}
             <div class="stat-row">
-                <span class="stat-label">MCP Endpoint</span>
+                <span class="stat-label" data-i18n="updated_label">Actualizado</span>
+                <span class="stat-value">{{ db.last_updated }}</span>
+            </div>
+            {% endif %}
+            <div class="stat-row">
+                <span class="stat-label" data-i18n="endpoint_label">Endpoint MCP</span>
                 <span class="stat-value endpoint-value">
                     <code class="endpoint-code">/mcp/{{ db.config.id }}</code>
-                    <button class="btn-icon" onclick="copyText('/mcp/{{ db.config.id }}')" title="Copy">
+                    <button class="btn-icon" onclick="copyText('/mcp/{{ db.config.id }}')" title="Copiar">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                     </button>
                 </span>
             </div>
         </div>
         <div class="card-footer">
-            <a href="/portal/databases/{{ db.config.id }}" class="btn btn-secondary">View Details</a>
+            <a href="/portal/databases/{{ db.config.id }}" class="btn btn-secondary" data-i18n="view_details">Ver Detalles</a>
             <form method="post" action="/portal/databases/{{ db.config.id }}/delete" class="inline-form"
-                  onsubmit="return confirm('Delete database \'{{ db.config.name }}\'? This removes all data and cannot be undone.')">
-                <button type="submit" class="btn btn-danger">Delete</button>
+                  onsubmit="return confirm('Eliminar base de datos \'{{ db.config.name }}\'? Esto elimina todos los datos y no se puede deshacer.')">
+                <button type="submit" class="btn btn-danger" data-i18n="delete_btn">Eliminar</button>
             </form>
         </div>
     </div>
     {% endfor %}
 </div>
+<div id="no-results" class="empty-state" style="display:none">
+    <p>Ninguna base de datos coincide con la b\u00fasqueda.</p>
+</div>
 {% else %}
 <div class="empty-state">
-    <p>No databases registered yet.</p>
-    <a href="/portal/upload" class="btn btn-primary">Upload your first Excel file</a>
+    <p data-i18n="no_databases">No hay bases de datos registradas a\u00fan.</p>
+    <a href="/portal/upload" class="btn btn-primary" data-i18n="upload_first">Sube tu primer archivo Excel</a>
 </div>
 {% endif %}
 
 {% if databases %}
 <section class="section">
-    <h2>Connect to Claude</h2>
+    <h2 data-i18n="connect_claude">Conectar con Claude</h2>
     <div class="setup-card">
-        <p>Set up all databases in Claude Code and Claude Desktop with one command:</p>
+        <p>Configura todas las bases de datos en Claude Code y Claude Desktop con un comando:</p>
         <div class="code-block">
             <code>curl -sL https://private-mcp.propiolatam.com/setup/script | bash</code>
-            <button class="btn-icon" onclick="copyText('curl -sL https://private-mcp.propiolatam.com/setup/script | bash')" title="Copy">
+            <button class="btn-icon" onclick="copyText('curl -sL https://private-mcp.propiolatam.com/setup/script | bash')" title="Copiar">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             </button>
         </div>
-        <p class="form-hint" style="margin-top:0.75rem">Or copy the JSON config for manual setup:</p>
+        <p class="form-hint" style="margin-top:0.75rem">O copia el JSON para configuraci\u00f3n manual:</p>
         <div class="code-block">
             <code><a href="/setup/mcp-config.json" target="_blank">/setup/mcp-config.json</a></code>
-            <button class="btn-icon" onclick="fetchAndCopy('/setup/mcp-config.json')" title="Copy JSON">
+            <button class="btn-icon" onclick="fetchAndCopy('/setup/mcp-config.json')" title="Copiar JSON">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             </button>
         </div>
@@ -81,17 +98,17 @@
 
 {% if history %}
 <section class="section">
-    <h2>Recent Uploads</h2>
+    <h2 data-i18n="recent_uploads">Subidas Recientes</h2>
     <div class="table-wrapper">
         <table class="table">
             <thead>
                 <tr>
-                    <th>Time</th>
-                    <th>User</th>
-                    <th>Source</th>
-                    <th>Files</th>
-                    <th>Rows</th>
-                    <th>Status</th>
+                    <th data-i18n="col_time">Hora</th>
+                    <th data-i18n="col_user">Usuario</th>
+                    <th data-i18n="col_source">Fuente</th>
+                    <th data-i18n="col_files">Archivos</th>
+                    <th data-i18n="col_rows">Filas</th>
+                    <th data-i18n="col_status">Estado</th>
                 </tr>
             </thead>
             <tbody>
@@ -103,11 +120,43 @@
                     <td>{{ h.file_names | join(", ") }}</td>
                     <td>{{ "{:,}".format(h.row_count) }}</td>
                     <td>
+                        {% if h.status == "processing" %}
+                        <span class="badge badge-processing badge-pulse" data-i18n="processing">Procesando...</span>
+                        {% else %}
                         <span class="badge badge-{{ h.status }}">{{ h.status }}</span>
+                        {% endif %}
                         {% if h.error_message %}
                         <span class="error-hint" title="{{ h.error_message }}">(?)</span>
                         {% endif %}
                     </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if query_history %}
+<section class="section">
+    <h2 data-i18n="recent_queries">Actividad MCP Reciente</h2>
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th data-i18n="col_time">Hora</th>
+                    <th data-i18n="col_db">Base de Datos</th>
+                    <th data-i18n="col_tool">Herramienta</th>
+                    <th data-i18n="col_args">Argumentos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for q in query_history %}
+                <tr>
+                    <td>{{ q.timestamp }}</td>
+                    <td>{{ q.db_name }}</td>
+                    <td><code>{{ q.tool_name }}</code></td>
+                    <td class="args-cell" title="{{ q.arguments_json }}">{{ q.arguments_json[:80] }}{% if q.arguments_json|length > 80 %}...{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -135,5 +184,50 @@ function fetchAndCopy(url) {
         });
     });
 }
+
+// Auto-refresh if any entry is processing
+{% if has_processing %}
+(function() {
+    var refreshTimer = setTimeout(function checkProcessing() {
+        fetch(window.location.href, {headers: {'Accept': 'text/html'}})
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(html, 'text/html');
+                var hasProcessing = doc.querySelector('.badge-processing');
+                if (hasProcessing) {
+                    // Still processing — reload page content
+                    window.location.reload();
+                }
+                // If no processing badge found, stop polling
+            })
+            .catch(function() {
+                setTimeout(checkProcessing, 5000);
+            });
+    }, 5000);
+})();
+{% endif %}
+
+// Search/filter databases
+(function() {
+    var searchInput = document.getElementById('db-search');
+    if (!searchInput) return;
+    var grid = document.getElementById('card-grid');
+    var noResults = document.getElementById('no-results');
+
+    searchInput.addEventListener('input', function() {
+        var query = this.value.toLowerCase().trim();
+        var cards = grid ? grid.querySelectorAll('.card') : [];
+        var visible = 0;
+        cards.forEach(function(card) {
+            var name = card.getAttribute('data-db-name') || '';
+            var desc = card.getAttribute('data-db-desc') || '';
+            var match = !query || name.includes(query) || desc.includes(query);
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        if (noResults) noResults.style.display = (visible === 0 && query) ? '' : 'none';
+    });
+})();
 </script>
 {% endblock %}

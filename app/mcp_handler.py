@@ -61,6 +61,14 @@ def create_mcp_server(config: DatabaseConfig) -> Server:
 
     @server.call_tool()
     async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
+        # Log the invocation (fire-and-forget, ignore errors)
+        try:
+            from app.portal.audit import log_query
+            import asyncio
+            asyncio.create_task(log_query(config.name, name, arguments))
+        except Exception:
+            pass
+
         try:
             if name == "list_tables":
                 tables = await list_tables(config)

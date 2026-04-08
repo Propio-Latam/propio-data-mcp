@@ -1,20 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MCP Data Bridge{% endblock %}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script>
+    // Apply theme and language before paint to avoid flash
+    (function() {
+        var theme = localStorage.getItem('theme') || 'light';
+        var lang = localStorage.getItem('lang') || 'es';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-lang', lang);
+    })();
+    </script>
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
             <a href="/portal/" class="nav-brand">MCP Data Bridge</a>
             <div class="nav-links">
-                <a href="/portal/" class="nav-link">Dashboard</a>
-                <a href="/portal/upload" class="nav-link nav-link-upload">Upload Data</a>
+                <a href="/portal/" class="nav-link" data-i18n="nav_dashboard">Dashboard</a>
+                <a href="/portal/upload" class="nav-link nav-link-upload" data-i18n="nav_upload">Subir Datos</a>
             </div>
             <div class="nav-user">{{ user_email }}</div>
+            <div class="nav-controls">
+                <!-- Language toggle -->
+                <button class="btn-nav-control" id="lang-toggle" title="Cambiar idioma / Switch language" aria-label="Toggle language">
+                    <span id="lang-label">ES</span>
+                </button>
+                <!-- Dark mode toggle -->
+                <button class="btn-nav-control" id="theme-toggle" title="Cambiar modo / Toggle dark mode" aria-label="Toggle dark mode">
+                    <svg id="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+                    <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                </button>
+                <!-- Logout -->
+                <a href="/.cloudflare-access/logout" class="btn-nav-control nav-logout" data-i18n="nav_logout" title="Cerrar sesión">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -30,8 +54,167 @@
     </main>
 
     <footer class="footer">
-        <div class="container">MCP Data Bridge &mdash; Propio Latam</div>
+        <div class="container footer-inner">
+            <span>MCP Data Bridge &mdash; Propio Latam</span>
+            <div id="disk-usage-bar" class="disk-usage-wrap" style="display:none">
+                <span class="disk-label" data-i18n="disk_label">Disco:</span>
+                <div class="disk-bar-track">
+                    <div class="disk-bar-fill" id="disk-bar-fill"></div>
+                </div>
+                <span class="disk-percent" id="disk-percent"></span>
+            </div>
+        </div>
     </footer>
+
+    <script>
+    // ---- Translations ----
+    var TRANSLATIONS = {
+        es: {
+            nav_dashboard: "Dashboard",
+            nav_upload: "Subir Datos",
+            nav_logout: "",  // icon only
+            back_dashboard: "\u2190 Volver al Dashboard",
+            upload_title: "Subir Datos Excel",
+            upload_source_label: "Nombre de Fuente",
+            upload_source_hint: "Esto crea una nueva base de datos. Usa el mismo nombre para reemplazar datos existentes.",
+            upload_desc_label: "Descripci\u00f3n",
+            upload_files_label: "Archivos Excel",
+            upload_submit: "Subir y Procesar",
+            upload_cancel: "Cancelar",
+            upload_drop: "Arrastra tus archivos .xlsx aqu\u00ed, o haz clic para buscar",
+            processing: "Procesando...",
+            processing_desc: "Leyendo archivos Excel y cargando datos en la base de datos.",
+            processing_hint: "Esto puede tardar un minuto para archivos grandes.",
+            upload_status_title: "Estado de Procesamiento",
+            upload_status_desc: "Monitoreo en tiempo real",
+            disk_label: "Disco:",
+            search_placeholder: "Buscar bases de datos...",
+            tables_label: "Tablas",
+            rows_label: "Filas Totales",
+            created_label: "Creado",
+            updated_label: "Actualizado",
+            endpoint_label: "Endpoint MCP",
+            view_details: "Ver Detalles",
+            delete_btn: "Eliminar",
+            recent_uploads: "Subidas Recientes",
+            recent_queries: "Actividad MCP Reciente",
+            connect_claude: "Conectar con Claude",
+            no_databases: "No hay bases de datos registradas a\u00fan.",
+            upload_first: "Sube tu primer archivo Excel",
+            col_time: "Hora",
+            col_user: "Usuario",
+            col_source: "Fuente",
+            col_files: "Archivos",
+            col_rows: "Filas",
+            col_status: "Estado",
+            col_db: "Base de Datos",
+            col_tool: "Herramienta",
+            col_args: "Argumentos",
+        },
+        en: {
+            nav_dashboard: "Dashboard",
+            nav_upload: "Upload Data",
+            nav_logout: "",
+            back_dashboard: "\u2190 Back to Dashboard",
+            upload_title: "Upload Excel Data",
+            upload_source_label: "Source Name",
+            upload_source_hint: "This creates a new database. Use the same name to replace existing data.",
+            upload_desc_label: "Description",
+            upload_files_label: "Excel Files",
+            upload_submit: "Upload & Process",
+            upload_cancel: "Cancel",
+            upload_drop: "Drag & drop .xlsx files here, or click to browse",
+            processing: "Processing...",
+            processing_desc: "Reading Excel files and loading data into the database.",
+            processing_hint: "This may take a minute for large files.",
+            upload_status_title: "Processing Status",
+            upload_status_desc: "Real-time monitoring",
+            disk_label: "Disk:",
+            search_placeholder: "Search databases...",
+            tables_label: "Tables",
+            rows_label: "Total Rows",
+            created_label: "Created",
+            updated_label: "Updated",
+            endpoint_label: "MCP Endpoint",
+            view_details: "View Details",
+            delete_btn: "Delete",
+            recent_uploads: "Recent Uploads",
+            recent_queries: "Recent MCP Activity",
+            connect_claude: "Connect to Claude",
+            no_databases: "No databases registered yet.",
+            upload_first: "Upload your first Excel file",
+            col_time: "Time",
+            col_user: "User",
+            col_source: "Source",
+            col_files: "Files",
+            col_rows: "Rows",
+            col_status: "Status",
+            col_db: "Database",
+            col_tool: "Tool",
+            col_args: "Arguments",
+        }
+    };
+
+    function applyTranslations(lang) {
+        var t = TRANSLATIONS[lang] || TRANSLATIONS['es'];
+        document.querySelectorAll('[data-i18n]').forEach(function(el) {
+            var key = el.getAttribute('data-i18n');
+            if (t[key] !== undefined && t[key] !== '') {
+                el.textContent = t[key];
+            }
+        });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) {
+            var key = el.getAttribute('data-i18n-placeholder');
+            if (t[key] !== undefined) {
+                el.placeholder = t[key];
+            }
+        });
+    }
+
+    // ---- Theme ----
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.getElementById('icon-moon').style.display = theme === 'light' ? 'block' : 'none';
+        document.getElementById('icon-sun').style.display = theme === 'dark' ? 'block' : 'none';
+    }
+
+    // ---- Init ----
+    var currentTheme = localStorage.getItem('theme') || 'light';
+    var currentLang = localStorage.getItem('lang') || 'es';
+    applyTheme(currentTheme);
+    document.getElementById('lang-label').textContent = currentLang.toUpperCase();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        applyTranslations(currentLang);
+
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme', currentTheme);
+            applyTheme(currentTheme);
+        });
+
+        document.getElementById('lang-toggle').addEventListener('click', function() {
+            currentLang = currentLang === 'es' ? 'en' : 'es';
+            localStorage.setItem('lang', currentLang);
+            document.getElementById('lang-label').textContent = currentLang.toUpperCase();
+            applyTranslations(currentLang);
+        });
+
+        // Disk usage
+        fetch('/portal/api/disk-usage')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var wrap = document.getElementById('disk-usage-bar');
+                var fill = document.getElementById('disk-bar-fill');
+                var pct = document.getElementById('disk-percent');
+                fill.style.width = data.percent + '%';
+                fill.className = 'disk-bar-fill' + (data.percent > 85 ? ' disk-bar-danger' : data.percent > 65 ? ' disk-bar-warn' : '');
+                pct.textContent = data.percent + '%';
+                wrap.style.display = 'flex';
+            })
+            .catch(function() {});
+    });
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>
