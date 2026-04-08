@@ -25,9 +25,10 @@ jobs:
 
             echo ">>> Installing cloudflared"
             if ! command -v cloudflared &>/dev/null; then
-                curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
-                sudo dpkg -i /tmp/cloudflared.deb
-                rm /tmp/cloudflared.deb
+                sudo rm -f /tmp/cloudflared.deb
+                curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /home/$USER/cloudflared.deb
+                sudo dpkg -i /home/$USER/cloudflared.deb
+                rm -f /home/$USER/cloudflared.deb
             else
                 echo "cloudflared already installed"
             fi
