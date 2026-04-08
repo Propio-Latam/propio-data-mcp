@@ -1,0 +1,64 @@
+name: Setup Cloudflare Tunnel
+
+on:
+  workflow_dispatch:
+    inputs:
+      tunnel_token:
+        description: 'Cloudflare Tunnel token (starts with eyJ...)'
+        required: true
+        type: string
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup tunnel via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            set -e
+
+            echo ">>> Installing cloudflared"
+            if ! command -v cloudflared &>/dev/null; then
+                curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o /tmp/cloudflared.deb
+                sudo dpkg -i /tmp/cloudflared.deb
+                rm /tmp/cloudflared.deb
+            else
+                echo "cloudflared already installed"
+            fi
+
+            echo ">>> Installing as service"
+            sudo cloudflared service install ${{ inputs.tunnel_token }} || echo "Service may already be installed"
+
+            echo ">>> Starting cloudflared"
+            sudo systemctl enable cloudflared
+            sudo systemctl restart cloudflared
+            sleep 3
+            sudo systemctl status cloudflared --no-pager
+
+            echo ">>> Updating nginx"
+            sudo sed -i 's/listen 80;/listen 127.0.0.1:80;/' /etc/nginx/sites-available/mcp-data-bridge || true
+            if ! grep -q "client_max_body_size" /etc/nginx/sites-available/mcp-data-bridge; then
+                sudo sed -i '/server_name/a\    client_max_body_size 100M;' /etc/nginx/sites-available/mcp-data-bridge
+            fi
+            sudo nginx -t && sudo systemctl restart nginx
+
+            echo ">>> Setting production mode"
+            if grep -q "^ENVIRONMENT=" /opt/mcp-data-bridge/.env; then
+                sudo sed -i 's/^ENVIRONMENT=.*/ENVIRONMENT=production/' /opt/mcp-data-bridge/.env
+            else
+                echo "ENVIRONMENT=production" | sudo tee -a /opt/mcp-data-bridge/.env
+            fi
+            if ! grep -q "^MAX_UPLOAD_SIZE_MB=" /opt/mcp-data-bridge/.env; then
+                echo "MAX_UPLOAD_SIZE_MB=50" | sudo tee -a /opt/mcp-data-bridge/.env
+            fi
+
+            echo ">>> Restarting app"
+            sudo systemctl restart mcp-data-bridge
+            sleep 3
+            curl -sf http://127.0.0.1:8000/health || echo "Health check failed"
+
+            echo ">>> Done! Tunnel setup complete."
