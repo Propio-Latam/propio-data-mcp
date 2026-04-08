@@ -2,17 +2,20 @@
 {% block title %}{{ config.name }} &mdash; MCP Data Bridge{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <a href="/portal/" class="back-link" data-i18n="back_dashboard">&larr; Volver al Dashboard</a>
-        <h1>{{ config.name }}</h1>
-        {% if config.description %}
-        <p class="page-desc">{{ config.description }}</p>
-        {% endif %}
-    </div>
+
+<!-- Database name as Doto hero -->
+<div class="hero-section">
+    <span class="hero-number" style="font-size: clamp(48px, 8vw, 96px); letter-spacing: -0.01em;">{{ config.name }}</span>
+    {% if config.description %}
+    <span class="hero-label">{{ config.description }}</span>
+    {% endif %}
+</div>
+
+<div class="page-header" style="margin-bottom: 1.5rem;">
+    <a href="/portal/" class="back-link" data-i18n="back_dashboard">&larr; Volver al Dashboard</a>
     <div class="page-header-actions">
         <a href="/portal/databases/{{ config.id }}/download" class="btn btn-secondary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:0.35rem"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Descargar Excel
         </a>
         <form method="post" action="/portal/databases/{{ config.id }}/delete"
@@ -22,6 +25,7 @@
     </div>
 </div>
 
+<!-- Metadata in Space Mono label style -->
 <div class="detail-meta">
     <div class="meta-item">
         <span class="meta-label">Database ID</span>
@@ -29,14 +33,16 @@
     </div>
     <div class="meta-item">
         <span class="meta-label" data-i18n="endpoint_label">Endpoint MCP</span>
-        <code class="endpoint-code">/mcp/{{ config.id }}</code>
-        <button class="btn-icon" onclick="copyText('/mcp/{{ config.id }}')" title="Copiar endpoint">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        </button>
+        <div class="endpoint-value">
+            <code class="endpoint-code">/mcp/{{ config.id }}</code>
+            <button class="btn-icon" onclick="copyText('/mcp/{{ config.id }}')" title="Copiar endpoint" aria-label="Copiar endpoint">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+        </div>
     </div>
     <div class="meta-item">
         <span class="meta-label" data-i18n="created_label">Creado</span>
-        <span>{{ config.created_at or "Desconocido" }}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:12px;color:var(--text-primary)">{{ config.created_at or "Desconocido" }}</span>
     </div>
     <div class="meta-item">
         <span class="meta-label">PostgreSQL Database</span>
@@ -47,13 +53,15 @@
 {% if tables %}
 {% for t in tables %}
 <section class="section table-section">
-    <div class="section-header">
-        <h2>{{ t.schema }}.{{ t.name }}</h2>
-        <span class="badge badge-info">{{ "{:,}".format(t.row_count) }} filas</span>
+    <div class="table-section-inner">
+        <div class="section-header">
+            <span style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:500;color:var(--text-display)">{{ t.schema }}.{{ t.name }}</span>
+            <span class="badge badge-info">{{ "{:,}".format(t.row_count) }} filas</span>
+        </div>
     </div>
 
     <h3>Esquema</h3>
-    <div class="table-wrapper">
+    <div class="table-wrapper" style="padding: 0 1.5rem 1.5rem;">
         <table class="table table-compact">
             <thead>
                 <tr>
@@ -65,7 +73,7 @@
             <tbody>
                 {% for col in t.columns %}
                 <tr>
-                    <td><code>{{ col.column_name }}</code></td>
+                    <td><code style="font-family:'Space Mono',monospace;font-size:11px;color:var(--interactive)">{{ col.column_name }}</code></td>
                     <td>{{ col.data_type }}</td>
                     <td>{{ col.is_nullable }}</td>
                 </tr>
@@ -76,7 +84,7 @@
 
     {% if t.sample_rows %}
     <h3>Datos de Muestra ({{ t.sample_rows | length }} filas)</h3>
-    <div class="table-wrapper">
+    <div class="table-wrapper" style="padding: 0 1.5rem 1.5rem;">
         <table class="table table-compact">
             <thead>
                 <tr>
@@ -104,6 +112,7 @@
     <p>No se encontraron tablas en esta base de datos.</p>
 </div>
 {% endif %}
+
 {% endblock %}
 
 {% block scripts %}

@@ -2,13 +2,18 @@
 {% block title %}Dashboard &mdash; MCP Data Bridge{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 data-i18n="nav_dashboard">Dashboard</h1>
-    <a href="/portal/upload" class="btn btn-primary" data-i18n="nav_upload">Subir Datos</a>
+
+<!-- Hero: database count as huge Doto number -->
+<div class="hero-section">
+    <span class="hero-number">{{ databases | length if databases else "0" }}</span>
+    <span class="hero-label" data-i18n="nav_dashboard">Dashboard</span>
+    <div class="hero-actions">
+        <a href="/portal/upload" class="btn btn-primary" data-i18n="nav_upload">Subir Datos</a>
+    </div>
 </div>
 
 {% if databases %}
-<!-- Search/filter -->
+<!-- Search / filter -->
 <div class="search-bar-wrap">
     <input type="text" id="db-search" class="search-input"
            data-i18n-placeholder="search_placeholder"
@@ -48,8 +53,8 @@
                 <span class="stat-label" data-i18n="endpoint_label">Endpoint MCP</span>
                 <span class="stat-value endpoint-value">
                     <code class="endpoint-code">/mcp/{{ db.config.id }}</code>
-                    <button class="btn-icon" onclick="copyText('/mcp/{{ db.config.id }}')" title="Copiar">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <button class="btn-icon" onclick="copyText('/mcp/{{ db.config.id }}')" title="Copiar" aria-label="Copiar endpoint">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                     </button>
                 </span>
             </div>
@@ -65,31 +70,31 @@
     {% endfor %}
 </div>
 <div id="no-results" class="empty-state" style="display:none">
-    <p>Ninguna base de datos coincide con la b\u00fasqueda.</p>
+    <p>Ninguna base de datos coincide con la b&uacute;squeda.</p>
 </div>
 {% else %}
 <div class="empty-state">
-    <p data-i18n="no_databases">No hay bases de datos registradas a\u00fan.</p>
+    <p data-i18n="no_databases">No hay bases de datos registradas a&uacute;n.</p>
     <a href="/portal/upload" class="btn btn-primary" data-i18n="upload_first">Sube tu primer archivo Excel</a>
 </div>
 {% endif %}
 
 {% if databases %}
 <section class="section">
-    <h2 data-i18n="connect_claude">Conectar con Claude</h2>
+    <div class="section-title" data-i18n="connect_claude">Conectar con Claude</div>
     <div class="setup-card">
         <p>Configura todas las bases de datos en Claude Code y Claude Desktop con un comando:</p>
         <div class="code-block">
             <code>curl -sL https://private-mcp.propiolatam.com/setup/script | bash</code>
-            <button class="btn-icon" onclick="copyText('curl -sL https://private-mcp.propiolatam.com/setup/script | bash')" title="Copiar">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <button class="btn-icon" onclick="copyText('curl -sL https://private-mcp.propiolatam.com/setup/script | bash')" title="Copiar" aria-label="Copiar comando">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             </button>
         </div>
-        <p class="form-hint" style="margin-top:0.75rem">O copia el JSON para configuraci\u00f3n manual:</p>
+        <p class="form-hint" style="margin-bottom:0.75rem">O copia el JSON para configuraci&oacute;n manual:</p>
         <div class="code-block">
             <code><a href="/setup/mcp-config.json" target="_blank">/setup/mcp-config.json</a></code>
-            <button class="btn-icon" onclick="fetchAndCopy('/setup/mcp-config.json')" title="Copiar JSON">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            <button class="btn-icon" onclick="fetchAndCopy('/setup/mcp-config.json')" title="Copiar JSON" aria-label="Copiar JSON">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             </button>
         </div>
     </div>
@@ -98,7 +103,7 @@
 
 {% if history %}
 <section class="section">
-    <h2 data-i18n="recent_uploads">Subidas Recientes</h2>
+    <div class="section-title" data-i18n="recent_uploads">Subidas Recientes</div>
     <div class="table-wrapper">
         <table class="table">
             <thead>
@@ -126,7 +131,7 @@
                         <span class="badge badge-{{ h.status }}">{{ h.status }}</span>
                         {% endif %}
                         {% if h.error_message %}
-                        <span class="error-hint" title="{{ h.error_message }}">(?)</span>
+                        <span class="error-hint" title="{{ h.error_message }}">[?]</span>
                         {% endif %}
                     </td>
                 </tr>
@@ -139,7 +144,7 @@
 
 {% if query_history %}
 <section class="section">
-    <h2 data-i18n="recent_queries">Actividad MCP Reciente</h2>
+    <div class="section-title" data-i18n="recent_queries">Actividad MCP Reciente</div>
     <div class="table-wrapper">
         <table class="table">
             <thead>
@@ -164,6 +169,7 @@
     </div>
 </section>
 {% endif %}
+
 {% endblock %}
 
 {% block scripts %}
@@ -175,6 +181,7 @@ function copyText(text) {
         setTimeout(function() { el.classList.remove('copied'); }, 1500);
     });
 }
+
 function fetchAndCopy(url) {
     fetch(url).then(function(r) { return r.text(); }).then(function(text) {
         navigator.clipboard.writeText(text).then(function() {
@@ -188,18 +195,16 @@ function fetchAndCopy(url) {
 // Auto-refresh if any entry is processing
 {% if has_processing %}
 (function() {
-    var refreshTimer = setTimeout(function checkProcessing() {
-        fetch(window.location.href, {headers: {'Accept': 'text/html'}})
+    setTimeout(function checkProcessing() {
+        fetch(window.location.href, { headers: { 'Accept': 'text/html' } })
             .then(function(r) { return r.text(); })
             .then(function(html) {
                 var parser = new DOMParser();
                 var doc = parser.parseFromString(html, 'text/html');
                 var hasProcessing = doc.querySelector('.badge-processing');
                 if (hasProcessing) {
-                    // Still processing — reload page content
                     window.location.reload();
                 }
-                // If no processing badge found, stop polling
             })
             .catch(function() {
                 setTimeout(checkProcessing, 5000);
@@ -208,24 +213,26 @@ function fetchAndCopy(url) {
 })();
 {% endif %}
 
-// Search/filter databases
+// Search / filter databases
 (function() {
     var searchInput = document.getElementById('db-search');
     if (!searchInput) return;
-    var grid = document.getElementById('card-grid');
+    var grid      = document.getElementById('card-grid');
     var noResults = document.getElementById('no-results');
 
     searchInput.addEventListener('input', function() {
-        var query = this.value.toLowerCase().trim();
-        var cards = grid ? grid.querySelectorAll('.card') : [];
+        var query   = this.value.toLowerCase().trim();
+        var cards   = grid ? grid.querySelectorAll('.card') : [];
         var visible = 0;
+
         cards.forEach(function(card) {
-            var name = card.getAttribute('data-db-name') || '';
-            var desc = card.getAttribute('data-db-desc') || '';
+            var name  = card.getAttribute('data-db-name') || '';
+            var desc  = card.getAttribute('data-db-desc') || '';
             var match = !query || name.includes(query) || desc.includes(query);
             card.style.display = match ? '' : 'none';
             if (match) visible++;
         });
+
         if (noResults) noResults.style.display = (visible === 0 && query) ? '' : 'none';
     });
 })();

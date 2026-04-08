@@ -3,23 +3,27 @@
 
 {% block content %}
 <div class="page-header">
-    <h1 data-i18n="upload_title">Subir Datos Excel</h1>
+    <div>
+        <a href="/portal/" class="back-link" data-i18n="back_dashboard">&larr; Volver al Dashboard</a>
+        <h1 data-i18n="upload_title">Subir Datos Excel</h1>
+    </div>
 </div>
 
 <form method="post" action="/portal/upload" enctype="multipart/form-data" id="upload-form" class="form-card">
+
     <div class="form-group">
         <label for="source_name" data-i18n="upload_source_label">Nombre de Fuente <span class="required">*</span></label>
         <input type="text" id="source_name" name="source_name" required
                placeholder="ej: Banco Estado, Santander, Creditu"
                pattern="[a-zA-Z0-9\s\-]+"
-               title="Letras, n\u00fameros, espacios y guiones">
+               title="Letras, n&uacute;meros, espacios y guiones">
         <p class="form-hint" data-i18n="upload_source_hint">Esto crea una nueva base de datos. Usa el mismo nombre para reemplazar datos existentes.</p>
         <!-- Replace warning -->
         <div id="replace-warning" class="replace-warning hidden" role="alert" aria-live="polite"></div>
     </div>
 
     <div class="form-group">
-        <label for="description" data-i18n="upload_desc_label">Descripci\u00f3n</label>
+        <label for="description" data-i18n="upload_desc_label">Descripci&oacute;n</label>
         <input type="text" id="description" name="description"
                placeholder="ej: Datos de remesas de Banco Estado">
     </div>
@@ -30,13 +34,13 @@
             <input type="file" id="files" name="files" multiple
                    accept=".xlsx,.xls" class="drop-zone-input">
             <div class="drop-zone-prompt">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <p data-i18n="upload_drop">Arrastra tus archivos .xlsx aqu\u00ed, o haz clic para buscar</p>
-                <p class="form-hint">M\u00e1x {{ max_size_mb }} MB por archivo</p>
+                <p data-i18n="upload_drop">Arrastra tus archivos .xlsx aqu&iacute;, o haz clic para buscar</p>
+                <p class="form-hint">M&aacute;x {{ max_size_mb }} MB por archivo</p>
             </div>
         </div>
         <div id="file-list" class="file-list"></div>
@@ -44,7 +48,7 @@
 
     <!-- Data Preview Section -->
     <div id="preview-section" class="preview-section hidden">
-        <h3 class="preview-title">Vista Previa de Datos</h3>
+        <div class="preview-title">Vista Previa de Datos</div>
         <div id="preview-container"></div>
     </div>
 
@@ -55,10 +59,11 @@
         <a href="/portal/" class="btn btn-secondary" data-i18n="upload_cancel">Cancelar</a>
     </div>
 
-    <div id="upload-progress" class="upload-progress hidden">
+    <div id="upload-progress" class="upload-progress hidden" aria-live="polite">
         <div class="spinner"></div>
-        <p data-i18n="processing">Procesando...</p>
+        <span data-i18n="processing">Procesando...</span>
     </div>
+
 </form>
 {% endblock %}
 
@@ -67,17 +72,17 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 (function() {
-    var dropZone = document.getElementById('drop-zone');
-    var fileInput = document.getElementById('files');
-    var fileList = document.getElementById('file-list');
-    var form = document.getElementById('upload-form');
-    var submitBtn = document.getElementById('submit-btn');
-    var progress = document.getElementById('upload-progress');
-    var sourceInput = document.getElementById('source_name');
-    var replaceWarning = document.getElementById('replace-warning');
-    var previewSection = document.getElementById('preview-section');
+    var dropZone        = document.getElementById('drop-zone');
+    var fileInput       = document.getElementById('files');
+    var fileList        = document.getElementById('file-list');
+    var form            = document.getElementById('upload-form');
+    var submitBtn       = document.getElementById('submit-btn');
+    var progress        = document.getElementById('upload-progress');
+    var sourceInput     = document.getElementById('source_name');
+    var replaceWarning  = document.getElementById('replace-warning');
+    var previewSection  = document.getElementById('preview-section');
     var previewContainer = document.getElementById('preview-container');
-    var maxSizeMB = {{ max_size_mb }};
+    var maxSizeMB       = {{ max_size_mb }};
     var checkSourceTimer = null;
 
     // ---- Drag & drop ----
@@ -111,23 +116,23 @@
             var f = files[i];
             totalSize += f.size;
             var sizeMB = (f.size / 1024 / 1024).toFixed(1);
-            var ext = f.name.split('.').pop().toLowerCase();
-            var valid = (ext === 'xlsx' || ext === 'xls') && f.size <= maxSizeMB * 1024 * 1024;
+            var ext    = f.name.split('.').pop().toLowerCase();
+            var valid  = (ext === 'xlsx' || ext === 'xls') && f.size <= maxSizeMB * 1024 * 1024;
 
             var div = document.createElement('div');
             div.className = 'file-item' + (valid ? '' : ' file-item-invalid');
-            div.innerHTML = '<span class="file-name">' + escapeHtml(f.name) + '</span>' +
-                           '<span class="file-size">' + sizeMB + ' MB</span>' +
-                           (valid ? '' : '<span class="file-error">Inv\u00e1lido</span>');
+            div.innerHTML =
+                '<span class="file-name">' + escapeHtml(f.name) + '</span>' +
+                '<span class="file-size">' + sizeMB + ' MB</span>' +
+                (valid ? '' : '<span class="file-error">Inv&aacute;lido</span>');
             fileList.appendChild(div);
         }
 
         var totalDiv = document.createElement('div');
-        totalDiv.className = 'file-total';
-        totalDiv.textContent = files.length + ' archivo(s), ' + (totalSize / 1024 / 1024).toFixed(1) + ' MB total';
+        totalDiv.className   = 'file-total';
+        totalDiv.textContent = files.length + ' archivo(s) &mdash; ' + (totalSize / 1024 / 1024).toFixed(1) + ' MB total';
         fileList.appendChild(totalDiv);
 
-        // Build SheetJS preview for all files
         buildPreview(files);
     }
 
@@ -149,30 +154,29 @@
                 reader.onload = function(e) {
                     try {
                         var data = new Uint8Array(e.target.result);
-                        var wb = XLSX.read(data, {type: 'array'});
+                        var wb   = XLSX.read(data, { type: 'array' });
                         wb.SheetNames.forEach(function(sheetName) {
-                            var ws = wb.Sheets[sheetName];
-                            var jsonData = XLSX.utils.sheet_to_json(ws, {header: 1, defval: ''});
+                            var ws       = wb.Sheets[sheetName];
+                            var jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
                             if (!jsonData || jsonData.length === 0) return;
 
                             var block = document.createElement('div');
                             block.className = 'preview-block';
 
-                            var heading = document.createElement('h4');
-                            heading.className = 'preview-heading';
-                            heading.textContent = file.name + (wb.SheetNames.length > 1 ? ' — ' + sheetName : '');
+                            var heading = document.createElement('div');
+                            heading.className   = 'preview-heading';
+                            heading.textContent = file.name + (wb.SheetNames.length > 1 ? ' \u2014 ' + sheetName : '');
                             block.appendChild(heading);
 
                             var wrapper = document.createElement('div');
                             wrapper.className = 'table-wrapper';
 
-                            var table = document.createElement('table');
+                            var table   = document.createElement('table');
                             table.className = 'table table-compact preview-table';
 
-                            // Header row (row 0)
-                            var thead = document.createElement('thead');
+                            var thead     = document.createElement('thead');
                             var headerRow = document.createElement('tr');
-                            var headers = jsonData[0] || [];
+                            var headers   = jsonData[0] || [];
                             headers.forEach(function(h) {
                                 var th = document.createElement('th');
                                 th.textContent = h !== undefined && h !== null ? String(h) : '';
@@ -181,11 +185,10 @@
                             thead.appendChild(headerRow);
                             table.appendChild(thead);
 
-                            // Data rows (rows 1-5)
                             var tbody = document.createElement('tbody');
-                            var limit = Math.min(jsonData.length, 6); // header + 5 rows
+                            var limit = Math.min(jsonData.length, 6);
                             for (var r = 1; r < limit; r++) {
-                                var tr = document.createElement('tr');
+                                var tr      = document.createElement('tr');
                                 var rowData = jsonData[r] || [];
                                 for (var c = 0; c < headers.length; c++) {
                                     var td = document.createElement('td');
@@ -199,17 +202,17 @@
                             block.appendChild(wrapper);
 
                             var rowNote = document.createElement('p');
-                            rowNote.className = 'form-hint';
+                            rowNote.className   = 'form-hint';
                             rowNote.textContent = 'Mostrando ' + (limit - 1) + ' de ' + (jsonData.length - 1) + ' filas';
                             block.appendChild(rowNote);
 
                             previewContainer.appendChild(block);
                         });
-                    } catch(err) {
+                    } catch (err) {
                         var errDiv = document.createElement('p');
-                        errDiv.className = 'form-hint';
-                        errDiv.style.color = 'var(--color-danger)';
-                        errDiv.textContent = 'No se pudo leer: ' + file.name;
+                        errDiv.className        = 'form-hint';
+                        errDiv.style.color      = 'var(--accent)';
+                        errDiv.textContent      = 'No se pudo leer: ' + file.name;
                         previewContainer.appendChild(errDiv);
                     }
                     pending--;
@@ -222,7 +225,7 @@
         }
     }
 
-    // ---- Replace confirmation: check on blur of source_name ----
+    // ---- Replace confirmation ----
     sourceInput.addEventListener('blur', function() {
         var name = this.value.trim();
         if (!name) {
@@ -238,21 +241,18 @@
                     if (data.exists) {
                         var rowStr = data.row_count ? data.row_count.toLocaleString() + ' filas' : 'datos existentes';
                         replaceWarning.innerHTML =
-                            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
-                            ' Esto reemplazar\u00e1 los datos existentes en <strong>\'' + escapeHtml(name) + '\'</strong> (' + rowStr + '). \u00bfContinuar?';
+                            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+                            ' Esto reemplazar&aacute; los datos existentes en <strong>\'' + escapeHtml(name) + '\'</strong> (' + rowStr + '). &iquest;Continuar?';
                         replaceWarning.classList.remove('hidden');
                     } else {
                         replaceWarning.classList.add('hidden');
                         replaceWarning.innerHTML = '';
                     }
                 })
-                .catch(function() {
-                    replaceWarning.classList.add('hidden');
-                });
+                .catch(function() { replaceWarning.classList.add('hidden'); });
         }, 300);
     });
 
-    // Also clear warning when user starts typing again
     sourceInput.addEventListener('input', function() {
         replaceWarning.classList.add('hidden');
         replaceWarning.innerHTML = '';
@@ -261,7 +261,7 @@
     // ---- Form submission ----
     form.addEventListener('submit', function(e) {
         var sourceName = sourceInput.value.trim();
-        var files = fileInput.files;
+        var files      = fileInput.files;
 
         if (!sourceName) {
             e.preventDefault();
@@ -273,7 +273,6 @@
             alert('Por favor selecciona al menos un archivo');
             return;
         }
-
         for (var i = 0; i < files.length; i++) {
             var ext = files[i].name.split('.').pop().toLowerCase();
             if (ext !== 'xlsx' && ext !== 'xls') {
@@ -288,7 +287,7 @@
             }
         }
 
-        submitBtn.disabled = true;
+        submitBtn.disabled    = true;
         submitBtn.textContent = 'Subiendo...';
         progress.classList.remove('hidden');
     });
