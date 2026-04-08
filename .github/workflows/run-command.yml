@@ -1,0 +1,23 @@
+name: Run VM Command
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run on VM'
+        required: true
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run command via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          request_pty: true
+          command_timeout: 5m
+          script: ${{ inputs.command }}
