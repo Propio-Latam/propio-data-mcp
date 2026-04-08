@@ -1192,9 +1192,9 @@ main.container { flex: 1; }
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #000;
-    border: 1px solid var(--border-visible);
-    color: var(--text-primary);
+    background: #0a0a0a;
+    border: 1px solid #333;
+    color: #e8e8e8;
     padding: 0.75rem 1rem;
     border-radius: 8px;
     font-size: 0.85rem;
@@ -1207,18 +1207,18 @@ main.container { flex: 1; }
     font-family: 'Space Mono', monospace;
     font-size: 12px;
     white-space: nowrap;
-    color: var(--text-primary);
+    color: #e8e8e8;
 }
 
 .code-block a {
-    color: var(--interactive);
+    color: #5B9BF6;
     text-decoration: none;
 }
 
 .code-block a:hover { text-decoration: underline; }
 
-.code-block .btn-icon { color: var(--text-disabled); }
-.code-block .btn-icon:hover  { color: var(--text-primary); }
+.code-block .btn-icon { color: #666; }
+.code-block .btn-icon:hover  { color: #e8e8e8; }
 .code-block .btn-icon.copied { color: var(--success); }
 
 /* ============================
