@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import settings
-from app.db_registry import list_databases, get_database, delete_database
+from app.db_registry import list_databases, get_database, get_database_by_name, delete_database
 from app.db_pool import list_tables, describe_table, sample_data, close_pool, get_pool
 from app.services.excel_loader import process_upload, process_upload_from_dir, drop_pg_database, UploadError
 from app.portal.audit import log_upload, get_upload_history
@@ -179,7 +179,7 @@ async def handle_upload(
 @router.get("/databases/{db_id}", response_class=HTMLResponse)
 async def database_detail(request: Request, db_id: str):
     """Database detail page — tables, schemas, sample data."""
-    config = await get_database(db_id)
+    config = await get_database(db_id) or await get_database_by_name(db_id)
     if not config:
         raise HTTPException(404, "Database not found")
 
@@ -227,7 +227,7 @@ async def database_detail(request: Request, db_id: str):
 @router.post("/databases/{db_id}/delete")
 async def delete_db(request: Request, db_id: str):
     """Delete a database — drop PG database, remove from registry, close pool."""
-    config = await get_database(db_id)
+    config = await get_database(db_id) or await get_database_by_name(db_id)
     if not config:
         raise HTTPException(404, "Database not found")
 
