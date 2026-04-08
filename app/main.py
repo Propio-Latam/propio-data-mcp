@@ -15,9 +15,39 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from mcp.server.streamable_http import StreamableHTTPServerTransport
 from mcp.server.sse import SseServerTransport
 
+from urllib.parse import urlparse
+
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
 
 from app.config import settings
+
+
+# ---- Security middleware ----
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses and enforce CSRF origin checks on portal POST."""
+
+    async def dispatch(self, request: Request, call_next):
+        # CSRF: block POST requests to /portal/* from foreign origins
+        if request.method == "POST" and request.url.path.startswith("/portal/"):
+            origin = request.headers.get("origin") or ""
+            referer = request.headers.get("referer") or ""
+            allowed = settings.base_url
+            origin_ok = origin == allowed or origin == ""
+            referer_ok = referer.startswith(allowed) or referer == ""
+            if not origin_ok and not referer_ok:
+                return StarletteResponse("CSRF check failed", status_code=403)
+
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if settings.is_production:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 from app.auth import require_api_key
 from app.db_registry import get_database, get_database_by_name, list_databases
 from app.db_pool import close_all_pools
@@ -28,6 +58,9 @@ from app.portal.routes import router as portal_router
 
 
 # ---- Session management ----
+
+MAX_MCP_SESSIONS = 100
+
 
 class SessionState:
     def __init__(self, transport: StreamableHTTPServerTransport):
@@ -112,6 +145,9 @@ class MCPStreamableMiddleware:
             return
 
         # POST without session — new session
+        if len(_sessions) >= MAX_MCP_SESSIONS:
+            await self._send_json(send, 503, {"detail": "Too many active sessions"})
+            return
         new_session_id = uuid.uuid4().hex
         server = create_mcp_server(config)
         transport = StreamableHTTPServerTransport(
@@ -157,16 +193,20 @@ app = FastAPI(
     description="Expose PostgreSQL databases as MCP servers and REST APIs",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
 )
 
 # Add MCP middleware FIRST (outermost) so it intercepts before FastAPI routing
 app.add_middleware(MCPStreamableMiddleware)
 
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[settings.base_url],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "X-API-Key", "Accept", "mcp-session-id"],
 )
 
 app.include_router(admin_router)
@@ -215,8 +255,11 @@ async def mcp_messages_endpoint(request: Request, db_id: str, _key: str = Depend
 
 # ---- Public setup endpoints (outside Cloudflare Access /portal/*) ----
 
-_SETUP_API_KEY = "f4e269254a2bfd08bab1852edf0e13b60b89fc1522649050"
-_SETUP_BASE_URL = "https://private-mcp.propiolatam.com"
+def _setup_api_key():
+    return settings.first_api_key
+
+def _setup_base_url():
+    return settings.base_url
 
 
 @app.get("/setup/script", response_class=PlainTextResponse)
@@ -227,7 +270,7 @@ async def setup_script():
     for db in dbs:
         servers[db.name] = {
             "command": "npx",
-            "args": ["-y", "mcp-remote", f"{_SETUP_BASE_URL}/mcp/{db.id}?token={_SETUP_API_KEY}"],
+            "args": ["-y", "mcp-remote", f"{_setup_base_url()}/mcp/{db.id}?token={_setup_api_key()}"],
         }
 
     servers_json = json_mod.dumps(servers, indent=2)
@@ -236,7 +279,7 @@ async def setup_script():
     # The python heredoc uses PYEOF without quotes so $FILE expands from bash
     script = f'''#!/usr/bin/env bash
 # Propio Data MCP — Auto-generated setup for all databases
-# Usage: curl -sL {_SETUP_BASE_URL}/setup/script | bash
+# Usage: curl -sL {_setup_base_url()}/setup/script | bash
 set -euo pipefail
 
 echo ""
@@ -254,7 +297,7 @@ if ! command -v python3 &>/dev/null; then
 fi
 
 echo "[*] Testing connection..."
-HEALTH=$(curl -sf {_SETUP_BASE_URL}/health 2>/dev/null || echo "FAIL")
+HEALTH=$(curl -sf {_setup_base_url()}/health 2>/dev/null || echo "FAIL")
 if [ "$HEALTH" = "FAIL" ]; then
     echo "[!] Cannot reach server."
     exit 1
@@ -308,7 +351,7 @@ echo "  Setup complete! Configured {len(dbs)} database(s):"
 {db_list}
 echo ""
 echo "  Restart Claude Code / Claude Desktop to apply."
-echo "  Portal: {_SETUP_BASE_URL}/portal/"
+echo "  Portal: {_setup_base_url()}/portal/"
 echo ""
 '''
     return PlainTextResponse(content=script, media_type="text/plain")
@@ -322,7 +365,7 @@ async def mcp_config_json():
     for db in dbs:
         servers[db.name] = {
             "command": "npx",
-            "args": ["-y", "mcp-remote", f"{_SETUP_BASE_URL}/mcp/{db.id}?token={_SETUP_API_KEY}"],
+            "args": ["-y", "mcp-remote", f"{_setup_base_url()}/mcp/{db.id}?token={_setup_api_key()}"],
         }
     return JSONResponse(content={"mcpServers": servers})
 

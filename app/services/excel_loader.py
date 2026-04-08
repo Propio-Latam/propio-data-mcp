@@ -24,10 +24,10 @@ from app.db_registry import add_database, get_database_by_name, delete_database
 # Serialize one upload at a time to avoid OOM on e2-micro (1 GB RAM)
 _upload_semaphore = asyncio.Semaphore(1)
 
-PG_USER = "mcpbridge"
-PG_PASSWORD = "mcpbridge"
-PG_HOST = "localhost"
-PG_PORT = 5432
+PG_USER = settings.pg_user
+PG_PASSWORD = settings.pg_password
+PG_HOST = settings.pg_host
+PG_PORT = settings.pg_port
 
 MAX_FILE_SIZE_BYTES = settings.max_upload_size_mb * 1024 * 1024
 ALLOWED_EXTENSIONS = {".xlsx", ".xls"}

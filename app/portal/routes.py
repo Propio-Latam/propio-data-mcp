@@ -163,22 +163,23 @@ async def handle_upload(
     Processing happens in the background to avoid Cloudflare's 100s timeout.
     """
     user_email = _get_user_email(request)
-    file_names = [f.filename or "unknown" for f in files]
+    # Sanitize filenames to prevent path traversal (H1)
+    file_names = [os.path.basename(f.filename or "unknown") for f in files]
 
     # Validate file extensions before saving
-    for f in files:
-        ext = os.path.splitext(f.filename or "")[1].lower()
+    for fname in file_names:
+        ext = os.path.splitext(fname)[1].lower()
         if ext not in {".xlsx", ".xls"}:
             return RedirectResponse(
-                url=f"/portal/upload?error=File '{f.filename}' is not an Excel file (.xlsx or .xls)",
+                url=f"/portal/upload?error=Invalid file type. Only .xlsx and .xls are allowed.",
                 status_code=303,
             )
 
     # Save files to disk immediately (fast — just writing bytes)
     tmp_dir = tempfile.mkdtemp(prefix="mcp_upload_")
     try:
-        for f in files:
-            path = os.path.join(tmp_dir, f.filename)
+        for f, safe_name in zip(files, file_names):
+            path = os.path.join(tmp_dir, safe_name)
             with open(path, "wb") as out:
                 shutil.copyfileobj(f.file, out)
     except Exception as e:
