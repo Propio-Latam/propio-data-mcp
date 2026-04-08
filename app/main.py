@@ -233,6 +233,7 @@ async def setup_script():
     servers_json = json_mod.dumps(servers, indent=2)
     db_list = "\n".join(f'echo "    - {db.name}: {db.description}"' for db in dbs)
 
+    # The python heredoc uses PYEOF without quotes so $FILE expands from bash
     script = f'''#!/usr/bin/env bash
 # Propio Data MCP — Auto-generated setup for all databases
 # Usage: curl -sL {_SETUP_BASE_URL}/setup/script | bash
@@ -261,13 +262,15 @@ fi
 echo "[+] Server is up"
 echo ""
 
+SERVERS_JSON='{servers_json}'
+
 merge_config() {{
     local FILE="$1"
-    python3 << 'PYEOF'
-import json, os
+    python3 -c "
+import json, os, sys
 
-file_path = "$FILE"
-servers = {servers_json}
+file_path = sys.argv[1]
+servers = json.loads(sys.argv[2])
 
 config = {{}}
 if os.path.exists(file_path):
@@ -277,17 +280,17 @@ if os.path.exists(file_path):
     except (json.JSONDecodeError, IOError):
         config = {{}}
 
-if "mcpServers" not in config:
-    config["mcpServers"] = {{}}
+if 'mcpServers' not in config:
+    config['mcpServers'] = {{}}
 
 for name, entry in servers.items():
-    config["mcpServers"][name] = entry
-    print(f"  [+] Configured: {{name}}")
+    config['mcpServers'][name] = entry
+    print(f'  [+] Configured: {{name}}')
 
-os.makedirs(os.path.dirname(file_path) or ".", exist_ok=True)
-with open(file_path, "w") as f:
+os.makedirs(os.path.dirname(file_path) or '.', exist_ok=True)
+with open(file_path, 'w') as f:
     json.dump(config, f, indent=2)
-PYEOF
+" "$FILE" "$SERVERS_JSON"
 }}
 
 echo "[*] Setting up Claude Code..."
